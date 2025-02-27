@@ -50,8 +50,8 @@ stmt
     ;
 
 expr
-    : expr op= '*' expr #BinaryExpr //
-    | expr op= '+' expr #BinaryExpr //
+    : expr op= ('*' | '/') expr #BinaryExpr //
+    | expr op= ('+' | '-') expr #BinaryExpr //
     | value=INTEGER #IntegerLiteral //
     | name=ID #VarRefExpr //
     ;
