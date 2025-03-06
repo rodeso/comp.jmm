@@ -47,7 +47,16 @@ public class JmmSymbolTableBuilder {
         var params = buildParams(classDecl);
         var locals = buildLocals(classDecl);
 
-        return new JmmSymbolTable(className, methods, returnTypes, params, locals);
+
+        // super
+        String superClass = "";
+        if(classDecl.getObject("isSub", Boolean.class))
+        {
+            superClass = classDecl.get("super");
+        }
+
+
+        return new JmmSymbolTable(className, methods, returnTypes, params, locals, superClass);
     }
 
 
