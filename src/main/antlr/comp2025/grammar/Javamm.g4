@@ -7,6 +7,9 @@ grammar Javamm;
 CLASS : 'class' ;
 INT : 'int' ;
 BOOL : 'boolean' ;
+STRING : 'String';
+DOUBLE : 'double';
+FLOAT : 'float';
 PUBLIC : 'public' ;
 RETURN : 'return' ;
 
@@ -36,14 +39,18 @@ classDecl locals[boolean isSub=false]
 
 varDecl
     : type name=ID ';'
+    | type name=ID op1='[' op2=']' ';'
     ;
 
 type
-    : name= INT '[' ']'
+    : type '[' ']'
     | name= INT '...'
     | name= BOOL
     | name= INT
     | name= ID
+    | name =DOUBLE
+    | name= FLOAT
+    | name= STRING
     |;
 
 
@@ -52,6 +59,8 @@ methodDecl locals[boolean isPublic=false]
         type name=ID
         '(' paramList? ')'
         '{' varDecl* stmt* 'return' expr ';' '}'
+    | (PUBLIC {$isPublic=true;})? 'static' 'void' 'main' '(' STRING '[' ']' ID ')' '{' ( varDecl
+       )* ( stmt )* '}'
     ;
 
 paramList
@@ -65,12 +74,19 @@ param
 stmt
     : expr '=' expr ';' #AssignStmt //
     | RETURN expr ';' #ReturnStmt //
-    | ID '['expr']' '=' ID #AcessingArrayStmt
-    | 'if' '(' expr ')' stmt 'else' stmt #IfStmt
+    | 'if' '(' expr ')' stmt elseifStmt* elseStmt? #IfStmt
     | 'while' '('expr')' stmt #WhileStmt
     | expr ';' #SimpleExpr
-    | '{' (stmt)* '}' #IfOrLoopStmt
-    | 'for' '(' #ForStmt
+    | '{' (stmt)* '}' #BracketsStmt
+    | 'for' '(' expr ')' stmt #ForStmt
+    ;
+
+elseifStmt
+    : 'else if' '('expr ')' stmt
+    ;
+
+elseStmt
+    : 'else' stmt
     ;
 
 expr
@@ -78,14 +94,19 @@ expr
     | op= '!' expr #UnaryExpr
     | expr op= ('*' | '/') expr #BinaryExpr
     | expr op= ('+' | '-') expr #BinaryExpr
-    | expr op= '<' expr #BinaryExpr
+    | expr op= ('<' | '>') expr #BinaryExpr
+    | expr op=('<=' | '>=' | '==' | '!=' | '+=' | '-=' | '*=' | '/=') expr #BinaryExpr
     | expr op= '&&' expr #BinaryExpr
+    | expr op= '||' expr #BinaryExpr
     | expr '[' expr ']' #ListExpr
     | expr '.' 'length' #LengthExpr
-    | expr '.' ID '(' ( expr ( ',' expr )* )? ')' #ClassFunctionExpr
+    | expr '.' name=ID '(' ( expr ( ',' expr )* )? ')' #ClassFunctionExpr
     | expr 'new' expr 'int' expr '[' expr ']' #Label
-    | 'new' ID '(' ')' #New
+    | 'new' 'int''[' expr']' #ArrayCreation
+    | 'new' name=ID '(' (expr (',' expr) *)?')' #New
     | value=INTEGER #IntegerLiteral //
     | value= ('true' | 'false') #BooleanLiteral
+    | value = 'this' #ObjectReference
     | name=ID #VarRefExpr //
+    | name=ID op=('++' | '--') #IncrementByOne
     ;
