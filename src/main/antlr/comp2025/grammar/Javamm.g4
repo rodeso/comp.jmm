@@ -98,7 +98,8 @@ expr
     | expr op=('<=' | '>=' | '==' | '!=' | '+=' | '-=' | '*=' | '/=') expr #BinaryExpr
     | expr op= '&&' expr #BinaryExpr
     | expr op= '||' expr #BinaryExpr
-    | expr '[' expr ']' #ListExpr
+    | expr '[' expr ']' #ArrayAcess
+    | '[' (expr (',' expr)*)? ']' #ArrayLiteral
     | expr '.' 'length' #LengthExpr
     | expr '.' name=ID '(' ( expr ( ',' expr )* )? ')' #ClassFunctionExpr
     | expr 'new' expr 'int' expr '[' expr ']' #Label

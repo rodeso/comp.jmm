@@ -251,5 +251,10 @@ public class GrammarTest {
     public void testExprArrayInit() {
         TestUtils.parseVerbose("[10, 20, 30]", EXPRESSION);
     }
+    //test for empty literal arrays
+    @Test
+    public void testExprArrayInitEmpty() {
+        TestUtils.parseVerbose("[]", EXPRESSION);
+    }
 
 }
