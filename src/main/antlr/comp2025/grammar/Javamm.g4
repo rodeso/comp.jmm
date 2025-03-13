@@ -98,12 +98,12 @@ expr
     | expr op=('<=' | '>=' | '==' | '!=' | '+=' | '-=' | '*=' | '/=') expr #BinaryExpr
     | expr op= '&&' expr #BinaryExpr
     | expr op= '||' expr #BinaryExpr
-    | expr '[' expr ']' #ArrayAcess
+    | expr '[' expr ']' #ArrayAccess
     | '[' (expr (',' expr)*)? ']' #ArrayLiteral
     | expr '.' 'length' #LengthExpr
     | expr '.' name=ID '(' ( expr ( ',' expr )* )? ')' #ClassFunctionExpr
     | expr 'new' expr 'int' expr '[' expr ']' #Label
-    | 'new' 'int''[' expr']' #ArrayCreation
+    | 'new' type'[' expr']' #ArrayCreation
     | 'new' name=ID '(' (expr (',' expr) *)?')' #New
     | value=INTEGER #IntegerLiteral //
     | value= ('true' | 'false') #BooleanLiteral
