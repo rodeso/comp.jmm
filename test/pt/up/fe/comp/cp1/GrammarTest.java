@@ -259,7 +259,7 @@ public class GrammarTest {
     }
     @Test
     public void testExprNewBoolArray() {
-        TestUtils.parseVerbose("new bool[a]", EXPRESSION);
+        TestUtils.parseVerbose("new boolean[a]", EXPRESSION);
     }
     @Test
     public void testExprNewFloatArray() {

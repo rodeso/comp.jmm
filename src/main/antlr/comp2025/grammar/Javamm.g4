@@ -94,10 +94,9 @@ expr
     | op= '!' expr #UnaryExpr
     | expr op= ('*' | '/') expr #BinaryExpr
     | expr op= ('+' | '-') expr #BinaryExpr
-    | expr op= ('<' | '>') expr #BinaryExpr
-    | expr op=('<=' | '>=' | '==' | '!=' | '+=' | '-=' | '*=' | '/=') expr #BinaryExpr
+    | expr op= '<' expr #BinaryExpr
+    | expr op=('<=' | '==' | '!=' | '+=' | '-=' | '*=' | '/=') expr #BinaryExpr
     | expr op= '&&' expr #BinaryExpr
-    | expr op= '||' expr #BinaryExpr
     | expr '[' expr ']' #ArrayAccess
     | '[' (expr (',' expr)*)? ']' #ArrayLiteral
     | expr '.' 'length' #LengthExpr
