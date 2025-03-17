@@ -43,15 +43,13 @@ varDecl
     ;
 
 type
-    : type '[' ']'
-    | name= INT '...'
-    | name= BOOL
-    | name= INT
-    | name= ID
-    | name =DOUBLE
-    | name= FLOAT
-    | name= STRING
-    |;
+    : baseType ('[' ']')? // Arrays are handled separately
+    ;
+
+baseType
+    : INT | BOOL | DOUBLE | FLOAT | STRING | INT '...' | ID | 'void'
+    ;
+
 
 
 methodDecl locals[boolean isPublic=false]
