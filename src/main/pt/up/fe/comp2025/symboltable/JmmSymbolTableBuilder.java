@@ -119,29 +119,38 @@ public class JmmSymbolTableBuilder {
 
     private Type processType(JmmNode typeNode) {
         // Check if the typeNode is a valid TYPE node
-        if (!Kind.TYPE.check(typeNode)) {
+        if (!Kind.BASE_TYPE.check(typeNode) && !Kind.TYPE.check(typeNode)) {
             reports.add(newError(typeNode, "Expected a TYPE node, but found " + typeNode.getKind()));
             return TypeUtils.newIntType(); // Default to int as fallback
         }
-
-        // Safely retrieve the "name" attribute
-        String typeName = typeNode.getOptional("name").orElse(null);
-        if (typeName == null || typeName.isEmpty()) {
-            reports.add(newError(typeNode, "TYPE node is missing 'name' attribute."));
-            return TypeUtils.newIntType(); // Default to int type if missing
-        }
-
-        boolean isArray = false;
-
-        // Check if this is an array type (look for array brackets)
-        for (JmmNode child : typeNode.getChildren()) {
-            if (Kind.ARRAY.check(child)) { // Assuming "[]" or similar child kind
-                isArray = true;
-                break;
+        boolean isArray=false;
+        if(Kind.BASE_TYPE.check(typeNode)){
+            // Safely retrieve the "name" attribute
+            String typeName = typeNode.getOptional("name").orElse(null);
+            if (typeName == null || typeName.isEmpty()) {
+                reports.add(newError(typeNode, "TYPE node is missing 'name' attribute."));
+                return TypeUtils.newIntType(); // Default to int type if missing
             }
+
+            return new Type(typeName, false);
+        } else if (Kind.TYPE.check(typeNode)) {
+            String typeName = typeNode.getChildren().get(0).getOptional("name").orElse(null);
+            if (typeName == null || typeName.isEmpty()) {
+                reports.add(newError(typeNode, "TYPE node is missing 'name' attribute."));
+                return TypeUtils.newIntType(); // Default to int type if missing
+            }
+            String op1 = typeNode.getOptional("op1").orElse("");
+            String op2 = typeNode.getOptional("op2").orElse("");
+            if(op1.equals("[") && op2.equals("]")){
+                isArray=true;
+            }
+            return new Type(typeName, isArray);
         }
 
-        return new Type(typeName, isArray);
+
+
+
+        return TypeUtils.newIntType();
     }
 
     private List<String> buildMethods(JmmNode classDecl) {
