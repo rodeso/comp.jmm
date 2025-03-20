@@ -1,0 +1,8 @@
+
+class Fields{
+	int field1;
+	boolean field2;
+	MethodsAndFields field3;
+    int[] array;
+
+}
