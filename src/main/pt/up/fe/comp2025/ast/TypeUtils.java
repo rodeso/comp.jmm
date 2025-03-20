@@ -51,18 +51,12 @@ public class TypeUtils {
     private static Type getBinaryExprType(JmmNode binaryExpr) {
         String operator = binaryExpr.get("op");
 
-        switch (operator) {
-            case "+":
-            case "-":
-            case "*":
-            case "/":
-                return new Type("int", false);
-            case "<":
-            case "&&":
-                return new Type("boolean", false);
-            default:
-                throw new RuntimeException("Unknown binary operator '" + operator + "' in expression '" + binaryExpr + "'");
-        }
+        return switch (operator) {
+            case "+", "-", "*", "/" -> new Type("int", false);
+            case "<", "&&" -> new Type("boolean", false);
+            default ->
+                    throw new RuntimeException("Unknown binary operator '" + operator + "' in expression '" + binaryExpr + "'");
+        };
     }
 
     /**
@@ -86,30 +80,28 @@ public class TypeUtils {
         if (expr.hasAttribute("type")) {
             return expr.getObject("type", Type.class);
         }
-
-        String kind = expr.get("kind");
-        switch (kind) {
-            case "BINARY_EXPR":
-                return getBinaryExprType(expr);
-            case "UNARY_EXPR":
-                return getUnaryExprType(expr);
-            case "INTEGER_LITERAL":
-                return newIntType();
-            case "BOOL_LITERAL":
-                return newBooleanType();
-            case "ARRAY_CREATION":
-                return getArrayCreation(expr);
-            case "ARRAY_ACCESS":
-                return getArrayElementType(expr);
-            case "CLASS_FUNCTION_EXPR":
-                return getFunctionCallType(expr);
-            case "PRIORITY_EXPR":
-                // Return the type of the enclosed expression
-                return getExprType(expr.getChild(0));
-            default:
-                return null;
+        else {
+            Kind kind = Kind.fromString(expr.getKind());
+            return switch (kind) {
+                case BINARY_EXPR -> getBinaryExprType(expr);
+                case UNARY_EXPR -> getUnaryExprType(expr);
+                case INTEGER_LITERAL -> newIntType();
+                case BOOL_LITERAL -> newBooleanType();
+                case ARRAY_CREATION -> getArrayCreation(expr);
+                case ARRAY_ACCESS -> getArrayElementType(expr);
+                case CLASS_FUNCTION_EXPR -> getFunctionCallType(expr);
+                case PRIORITY_EXPR -> getExprType(expr.getChild(0));
+                case VAR_REF_EXPR -> getVarExprType(expr);
+                default -> throw new UnsupportedOperationException("Can't compute type for expression kind '" + kind + "'");
+            };
         }
     }
+
+    private static Type getVarExprType(JmmNode expr) {
+        // this is so hard im just going to skip for now
+        return new Type(expr.get("name"), false);
+    }
+
 
     /**
      * Handles the type for array creation expressions.

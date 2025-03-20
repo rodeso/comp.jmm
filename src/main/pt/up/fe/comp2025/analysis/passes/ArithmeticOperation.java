@@ -5,7 +5,6 @@ import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
-import pt.up.fe.comp2025.analysis.AnalysisPass;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
 
@@ -15,7 +14,6 @@ import java.util.Objects;
 import static pt.up.fe.comp2025.ast.TypeUtils.getExprType;
 
 public class ArithmeticOperation extends AnalysisVisitor {
-    private String currentMethod;
 
     @Override
     public void buildVisitor() {
@@ -36,6 +34,7 @@ public class ArithmeticOperation extends AnalysisVisitor {
         Type typeExpr2 = getExprType(expr2);
         if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/")) {
 
+            assert typeExpr1 != null;
             if (!typeExpr1.equals(typeExpr2)) {
                 String message = String.format("Operator '%s' not applicable to type '%s'", op, typeExpr1);
                 addReport(Report.newError(
