@@ -12,12 +12,11 @@ import java.util.Objects;
  */
 public class TypeUtils {
 
-    private final JmmSymbolTable table;
+    private final SymbolTable table;
 
     public TypeUtils(SymbolTable table) {
-        this.table = (JmmSymbolTable) table;
+        this.table = table;
     }
-
     public static Type newIntType() {
         return new Type("int", false);
     }
@@ -49,25 +48,14 @@ public class TypeUtils {
     /**
      * Returns the type for a binary expression by checking the operator and the types of the operands.
      */
-    private Type getBinaryExprType(JmmNode binaryExpr) {
+    private static Type getBinaryExprType(JmmNode binaryExpr) {
         String operator = binaryExpr.get("op");
-        JmmNode left = binaryExpr.getChild(0);
-        JmmNode right = binaryExpr.getChild(1);
-
-        Type leftType = getExprType(left);
-        Type rightType = getExprType(right);
 
         switch (operator) {
             case "+":
             case "-":
             case "*":
             case "/":
-                if (leftType.getName().equals("double") || rightType.getName().equals("double")) {
-                    return new Type("double", false);
-                }
-                if (leftType.getName().equals("float") || rightType.getName().equals("float")) {
-                    return new Type("float", false);
-                }
                 return new Type("int", false);
             case "<":
             case "&&":
@@ -94,7 +82,7 @@ public class TypeUtils {
     /**
      * Determines the type of an arbitrary expression.
      */
-    public Type getExprType(JmmNode expr) {
+    public static Type getExprType(JmmNode expr) {
         if (expr.hasAttribute("type")) {
             return expr.getObject("type", Type.class);
         }
@@ -136,7 +124,7 @@ public class TypeUtils {
      * Handles array access expressions.
      * Returns the element type by removing the array dimension.
      */
-    private Type getArrayElementType(JmmNode arrayAccess) {
+    private static Type getArrayElementType(JmmNode arrayAccess) {
         JmmNode arrayExpr = arrayAccess.getChild(0);
         Type arrayType = getExprType(arrayExpr);
         if (!arrayType.isArray()) {
@@ -148,8 +136,8 @@ public class TypeUtils {
     /**
      * Resolves the return type function call by querying the symbol table.
      */
-    private Type getFunctionCallType(JmmNode functionCall) {
+    private static Type getFunctionCallType(JmmNode functionCall) {
         String methodName = functionCall.get("name");
-        return table.getReturnType(methodName);
+        return new Type("int", false);
     }
 }
