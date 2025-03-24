@@ -185,7 +185,9 @@ public class JmmSymbolTableBuilder {
 
                 // Find the return type node
                 Type returnType = TypeUtils.newIntType(); // Default
-
+                if(name.equals("main")){
+                    returnType = new Type("void",false);
+                }
                 for (JmmNode child : method.getChildren()) {
                     if (Kind.TYPE.check(child)) {
                         // This might be the return type
