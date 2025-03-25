@@ -107,7 +107,7 @@ expr
     | expr '.' 'length' #LengthExpr
     | expr '.' name=ID '(' ( expr ( ',' expr )* )? ')' #ClassFunctionExpr
     | expr 'new' expr 'int' expr '[' expr ']' #Label
-    | 'new' type'[' expr']' #ArrayCreation
+    | 'new' type '[' expr ']' #ArrayCreation
     | 'new' name=ID '(' (expr (',' expr) *)?')' #New
     | value=INTEGER #IntegerLiteral //
     | value= ('true' | 'false') #BooleanLiteral
