@@ -20,6 +20,8 @@ INTEGER :  '0'
 ID : [a-zA-Z_$][a-zA-Z_$0-9]* ;
 
 WS : [ \t\n\r\f]+ -> skip ;
+L_COMMENT : '//' (.*?) [\r\n] -> skip;
+MULTI_L_COMMENT : '/*' (.*?) '*/' -> skip;
 
 program
     : (importDecl)* classDecl EOF

@@ -102,6 +102,18 @@ public class TypeUtils {
         return new Type(expr.get("name"), false);
     }
 
+    public static Type storeType(Type type, SymbolTable table) {
+        if (type.getName().equals(table.getClassName())) {
+            type.putObject("super", table.getSuper());
+        }
+
+        if (table.getImports().contains(type.getName())) {
+            type.putObject("imported", true);
+        }
+
+        return type;
+    }
+
 
     /**
      * Handles the type for array creation expressions.
