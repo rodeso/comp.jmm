@@ -33,6 +33,7 @@ public class ObjectCreation extends AnalysisVisitor {
             return null;
         }
 
+
         if (Objects.equals(symbolTable.getClassName(), className)) {
             object.putObject("type", storeType(new Type(className, false), symbolTable));
             return null;

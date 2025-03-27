@@ -79,16 +79,16 @@ public class JmmSymbolTableBuilder {
                 StringBuilder importPath = new StringBuilder();
 
                 // Get path attributes - using getAttribute instead of getListObject
-                if (child.getAttributes().contains("path")) {
-                    // The path might be stored differently in your AST
-                    // This is a guess based on common patterns
-                    String pathStr = child.get("path");
-                    String[] pathParts = pathStr.split("\\.");
-
-                    for (String part : pathParts) {
-                        importPath.append(part).append(".");
-                    }
-                }
+//                if (child.getAttributes().contains("path")) {
+//                    // The path might be stored differently in your AST
+//                    // This is a guess based on common patterns
+//                    String pathStr = child.get("path");
+//                    String[] pathParts = pathStr.split("\\.");
+//
+//                    for (String part : pathParts) {
+//                        importPath.append(part).append(".");
+//                    }
+//                }
 
                 // Add the final name
                 importPath.append(child.get("name"));
