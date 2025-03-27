@@ -144,4 +144,12 @@ public class TypeUtils {
         String methodName = functionCall.get("name");
         return new Type("int", false);
     }
+
+    public static boolean isAssignable(Type sourceType, Type destinationType) {
+        if (sourceType.equals(destinationType)) {
+            return true;
+        } else if (sourceType.hasAttribute("super") && (sourceType.getObject("super").equals(destinationType.getName())))
+            return true;
+        return sourceType.hasAttribute("imported") && destinationType.hasAttribute("imported");
+    }
 }

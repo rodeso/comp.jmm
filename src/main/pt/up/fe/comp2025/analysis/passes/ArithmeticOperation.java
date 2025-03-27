@@ -35,7 +35,7 @@ public class ArithmeticOperation extends AnalysisVisitor {
         if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/")) {
 
             assert typeExpr1 != null;
-            if (!typeExpr1.equals(typeExpr2)) {
+            if (!typeExpr1.equals(typeExpr2) && !typeExpr1.getName().equals("boolean")) {
                 String message = String.format("Operator '%s' not applicable to type '%s'", op, typeExpr1);
                 addReport(Report.newError(
                         Stage.SEMANTIC,
