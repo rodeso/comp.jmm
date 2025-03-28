@@ -1,0 +1,6 @@
+class A {
+    private int b;
+    getB() {
+        return this.b;
+    }
+}

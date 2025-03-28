@@ -3,7 +3,7 @@ class MethodsAndFields{
 	int field1;
 	boolean field2;
 	MethodsAndFields field3;
-	
+    int[] array;
 	public int getField1(){
 		return field1;
 	}

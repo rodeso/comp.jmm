@@ -45,9 +45,12 @@ public enum Kind {
     LABEL,
     ARRAY_CREATION,
     NEW,
-    BOOL_LITERAL,
     OBJECT_REFERENCE,
-    INCREMENT_BY_ONE;
+    INCREMENT_BY_ONE,
+    BASE_TYPE,
+    BOOLEAN_LITERAL,
+    ARRAY();
+
 
 
 

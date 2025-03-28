@@ -20,6 +20,8 @@ INTEGER :  '0'
 ID : [a-zA-Z_$][a-zA-Z_$0-9]* ;
 
 WS : [ \t\n\r\f]+ -> skip ;
+L_COMMENT : '//' (.*?) [\r\n] -> skip;
+MULTI_L_COMMENT : '/*' (.*?) '*/' -> skip;
 
 program
     : (importDecl)* classDecl EOF
@@ -43,11 +45,18 @@ varDecl
     ;
 
 type
-    : baseType ('[' ']')? // Arrays are handled separately
+    : name=baseType (op1='[' op2=']')? // Arrays are handled separately
     ;
 
 baseType
-    : INT | BOOL | DOUBLE | FLOAT | STRING | INT '...' | ID | 'void'
+    : name=INT
+    | name=BOOL
+    | name=DOUBLE
+    | name=FLOAT
+    | name=STRING
+    | name=INT '...'
+    | name=ID
+    | name='void'
     ;
 
 
@@ -57,7 +66,7 @@ methodDecl locals[boolean isPublic=false]
         type name=ID
         '(' paramList? ')'
         '{' varDecl* stmt* 'return' expr ';' '}'
-    | (PUBLIC {$isPublic=true;})? 'static' 'void' 'main' '(' STRING '[' ']' ID ')' '{' ( varDecl
+    | (PUBLIC {$isPublic=true;})? 'static' 'void' name='main' '(' STRING '[' ']' ID ')' '{' ( varDecl
        )* ( stmt )* '}'
     ;
 
@@ -100,7 +109,7 @@ expr
     | expr '.' 'length' #LengthExpr
     | expr '.' name=ID '(' ( expr ( ',' expr )* )? ')' #ClassFunctionExpr
     | expr 'new' expr 'int' expr '[' expr ']' #Label
-    | 'new' type'[' expr']' #ArrayCreation
+    | 'new' type '[' expr ']' #ArrayCreation
     | 'new' name=ID '(' (expr (',' expr) *)?')' #New
     | value=INTEGER #IntegerLiteral //
     | value= ('true' | 'false') #BooleanLiteral

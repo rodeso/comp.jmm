@@ -37,6 +37,12 @@ public class SymbolTableTest {
     }
 
     @Test
+    public void NumBigImports() {
+        var semantics = test("symboltable/BigImports.jmm", false);
+        assertEquals(3, semantics.getSymbolTable().getImports().size());
+    }
+
+    @Test
     public void ClassAndSuper() {
         var semantics = test("symboltable/Super.jmm", false);
         assertEquals("Super", semantics.getSymbolTable().getClassName());
@@ -48,10 +54,11 @@ public class SymbolTableTest {
     public void Fields() {
         var semantics = test("symboltable/MethodsAndFields.jmm", false);
         var fields = semantics.getSymbolTable().getFields();
-        assertEquals(3, fields.size());
+        assertEquals(4, fields.size());
         var checkInt = 0;
         var checkBool = 0;
         var checkObj = 0;
+        var checkIntArray = 0;
 
         for (var f : fields) {
             switch (f.getType().getName()) {
@@ -62,7 +69,13 @@ public class SymbolTableTest {
                     checkBool++;
                     break;
                 case "int":
-                    checkInt++;
+                    if(f.getType().isArray()){
+                        checkIntArray++;
+                    }
+                    else {
+                        checkInt++;
+                    }
+
                     break;
             }
         }
@@ -70,9 +83,45 @@ public class SymbolTableTest {
         assertEquals("Field of type int", 1, checkInt);
         assertEquals("Field of type boolean", 1, checkBool);
         assertEquals("Field of type object", 1, checkObj);
+        assertEquals("Field of type int array", 1, checkIntArray);
 
     }
+    @Test
+    public void FieldsOnly() {
+        var semantics = test("symboltable/FieldsOnly.jmm", false);
+        var fields = semantics.getSymbolTable().getFields();
+        assertEquals(4, fields.size());
+        var checkInt = 0;
+        var checkBool = 0;
+        var checkObj = 0;
+        var checkIntArray = 0;
 
+        for (var f : fields) {
+            switch (f.getType().getName()) {
+                case "MethodsAndFields":
+                    checkObj++;
+                    break;
+                case "boolean":
+                    checkBool++;
+                    break;
+                case "int":
+                    if(f.getType().isArray()){
+                        checkIntArray++;
+                    }
+                    else {
+                        checkInt++;
+                    }
+
+                    break;
+            }
+        }
+        ;
+        assertEquals("Field of type int", 1, checkInt);
+        assertEquals("Field of type boolean", 1, checkBool);
+        assertEquals("Field of type object", 1, checkObj);
+        assertEquals("Field of type int array", 1, checkIntArray);
+
+    }
     @Test
     public void Methods() {
         var semantics = test("symboltable/MethodsAndFields.jmm", false);

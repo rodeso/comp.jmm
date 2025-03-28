@@ -1,0 +1,7 @@
+import io;
+import List;
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
+
+class T{
+
+}

@@ -12,12 +12,11 @@ import java.util.Objects;
  */
 public class TypeUtils {
 
-    private final JmmSymbolTable table;
+    private final SymbolTable table;
 
     public TypeUtils(SymbolTable table) {
-        this.table = (JmmSymbolTable) table;
+        this.table = table;
     }
-
     public static Type newIntType() {
         return new Type("int", false);
     }
@@ -49,32 +48,15 @@ public class TypeUtils {
     /**
      * Returns the type for a binary expression by checking the operator and the types of the operands.
      */
-    private Type getBinaryExprType(JmmNode binaryExpr) {
+    private static Type getBinaryExprType(JmmNode binaryExpr) {
         String operator = binaryExpr.get("op");
-        JmmNode left = binaryExpr.getChild(0);
-        JmmNode right = binaryExpr.getChild(1);
 
-        Type leftType = getExprType(left);
-        Type rightType = getExprType(right);
-
-        switch (operator) {
-            case "+":
-            case "-":
-            case "*":
-            case "/":
-                if (leftType.getName().equals("double") || rightType.getName().equals("double")) {
-                    return new Type("double", false);
-                }
-                if (leftType.getName().equals("float") || rightType.getName().equals("float")) {
-                    return new Type("float", false);
-                }
-                return new Type("int", false);
-            case "<":
-            case "&&":
-                return new Type("boolean", false);
-            default:
-                throw new RuntimeException("Unknown binary operator '" + operator + "' in expression '" + binaryExpr + "'");
-        }
+        return switch (operator) {
+            case "+", "-", "*", "/" -> new Type("int", false);
+            case "<", "&&" -> new Type("boolean", false);
+            default ->
+                    throw new RuntimeException("Unknown binary operator '" + operator + "' in expression '" + binaryExpr + "'");
+        };
     }
 
     /**
@@ -94,41 +76,53 @@ public class TypeUtils {
     /**
      * Determines the type of an arbitrary expression.
      */
-    public Type getExprType(JmmNode expr) {
+    public static Type getExprType(JmmNode expr) {
         if (expr.hasAttribute("type")) {
             return expr.getObject("type", Type.class);
         }
-
-        String kind = expr.get("kind");
-        switch (kind) {
-            case "BINARY_EXPR":
-                return getBinaryExprType(expr);
-            case "UNARY_EXPR":
-                return getUnaryExprType(expr);
-            case "INTEGER_LITERAL":
-                return newIntType();
-            case "BOOL_LITERAL":
-                return newBooleanType();
-            case "ARRAY_CREATION":
-                return getArrayCreation(expr);
-            case "ARRAY_ACCESS":
-                return getArrayElementType(expr);
-            case "CLASS_FUNCTION_EXPR":
-                return getFunctionCallType(expr);
-            case "PRIORITY_EXPR":
-                // Return the type of the enclosed expression
-                return getExprType(expr.getChild(0));
-            default:
-                return null;
+        else {
+            Kind kind = Kind.fromString(expr.getKind());
+            return switch (kind) {
+                case BINARY_EXPR -> getBinaryExprType(expr);
+                case UNARY_EXPR -> getUnaryExprType(expr);
+                case INTEGER_LITERAL -> newIntType();
+                case BOOLEAN_LITERAL -> newBooleanType();
+                case ARRAY_CREATION -> getArrayCreation(expr);
+                case ARRAY_ACCESS -> getArrayElementType(expr);
+                case CLASS_FUNCTION_EXPR -> getFunctionCallType(expr);
+                case PRIORITY_EXPR -> getExprType(expr.getChild(0));
+                case VAR_REF_EXPR -> getVarExprType(expr);
+                case ARRAY_LITERAL -> getArrayLiteral(expr);
+                default -> throw new UnsupportedOperationException("Can't compute type for expression kind '" + kind + "'");
+            };
         }
     }
+
+    private static Type getVarExprType(JmmNode expr) {
+        // this is so hard im just going to skip for now
+        return new Type(expr.get("name"), false);
+    }
+
+    public static Type storeType(Type type, SymbolTable table) {
+        if (type.getName().equals(table.getClassName())) {
+            type.putObject("super", table.getSuper());
+        }
+
+        if (table.getImports().contains(type.getName())) {
+            type.putObject("imported", true);
+        }
+
+        return type;
+    }
+
 
     /**
      * Handles the type for array creation expressions.
      * Assumes the node has an attribute "type" with the base type.
      */
     private static Type getArrayCreation(JmmNode expr) {
-        String type = expr.get("type");
+        // in array creation the first child is always type and type only has one child that is the baseType
+        String type = expr.getChild(0).getChild(0).get("name");
         return new Type(type, true);
     }
 
@@ -136,7 +130,7 @@ public class TypeUtils {
      * Handles array access expressions.
      * Returns the element type by removing the array dimension.
      */
-    private Type getArrayElementType(JmmNode arrayAccess) {
+    private static Type getArrayElementType(JmmNode arrayAccess) {
         JmmNode arrayExpr = arrayAccess.getChild(0);
         Type arrayType = getExprType(arrayExpr);
         if (!arrayType.isArray()) {
@@ -148,8 +142,28 @@ public class TypeUtils {
     /**
      * Resolves the return type function call by querying the symbol table.
      */
-    private Type getFunctionCallType(JmmNode functionCall) {
+    private static Type getFunctionCallType(JmmNode functionCall) {
         String methodName = functionCall.get("name");
-        return table.getReturnType(methodName);
+        return new Type("int", false);
+    }
+
+    private static Type getArrayLiteral(JmmNode arrayLiteral){
+        return new Type("int",true);
+    }
+
+    public static boolean isAssignable(Type sourceType, Type destinationType) {
+        if (sourceType.equals(destinationType)) {
+            return true;
+        } else if (sourceType.hasAttribute("super") && (sourceType.getObject("super").equals(destinationType.getName())))
+            return true;
+        return sourceType.hasAttribute("imported") && destinationType.hasAttribute("imported");
+    }
+
+    public  static boolean isAssignableByImport(Type sourceType, Type destinationType, SymbolTable symbolTable){
+        if(symbolTable.getImports().contains(sourceType.getName()) && symbolTable.getImports().contains(destinationType.getName())){
+            return true;
+        }
+
+        return false;
     }
 }
