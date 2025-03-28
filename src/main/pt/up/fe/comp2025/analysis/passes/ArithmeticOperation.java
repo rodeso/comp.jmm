@@ -1,5 +1,6 @@
 package pt.up.fe.comp2025.analysis.passes;
 
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
@@ -9,6 +10,7 @@ import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
 
 
+import java.util.List;
 import java.util.Objects;
 
 import static pt.up.fe.comp2025.ast.TypeUtils.getExprType;
@@ -32,6 +34,14 @@ public class ArithmeticOperation extends AnalysisVisitor {
 
         Type typeExpr1 = getExprType(expr1);
         Type typeExpr2 = getExprType(expr2);
+
+        if(Kind.VAR_REF_EXPR.check(expr1)){
+            typeExpr1 = varType(expr1, table);
+        }
+
+        if(Kind.VAR_REF_EXPR.check(expr2)){
+            typeExpr2 = varType(expr2, table);
+        }
         if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/")) {
 
             assert typeExpr1 != null;
@@ -79,6 +89,10 @@ public class ArithmeticOperation extends AnalysisVisitor {
         Type opType = getExprType(unaryExpr);
         Type typeExpr = getExprType(expr);
 
+        if(Kind.VAR_REF_EXPR.check(expr)){
+            typeExpr = varType(expr, table);
+        }
+
         unaryExpr.putObject("type", opType);
 
         if (!typeExpr.equals(opType)) {
@@ -93,5 +107,39 @@ public class ArithmeticOperation extends AnalysisVisitor {
         }
 
         return null;
+    }
+
+    private Type varType(JmmNode varRefNode, SymbolTable symbolTable){
+        Type type = null;
+        JmmNode method = varRefNode.getParent().getParent();
+        String methodName = method.get("name");
+
+        List<Symbol> varsFromMethod = symbolTable.getLocalVariables(methodName);
+
+        for(Symbol symbol : varsFromMethod){
+            if(symbol.getName().equals(varRefNode.get("name"))){
+                type = symbol.getType();
+            }
+        }
+
+        List<Symbol> fields = symbolTable.getFields();
+
+        for(Symbol symbol : fields){
+            if(symbol.getName().equals(varRefNode.get("name"))){
+                type = symbol.getType();
+            }
+        }
+
+        List<Symbol> params = symbolTable.getParameters(methodName);
+
+        if(params != null){
+            for(Symbol symbol : params){
+                if(symbol.getName().equals(varRefNode.get("name"))){
+                    type = symbol.getType();
+                }
+            }
+        }
+
+        return type;
     }
 }

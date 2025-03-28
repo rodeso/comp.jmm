@@ -41,6 +41,8 @@ public class Assignment extends AnalysisVisitor {
             typeExpr2 = varType(expr2,symbolTable);
         }
 
+
+
         if (isAssignableByImport(typeExpr1,typeExpr2,symbolTable)) {
             assignStmt.putObject("type",storeType(typeExpr1,symbolTable));
             assignStmt.putObject("type",storeType(typeExpr2,symbolTable));
@@ -102,6 +104,16 @@ public class Assignment extends AnalysisVisitor {
         for(Symbol symbol : fields){
             if(symbol.getName().equals(varRefNode.get("name"))){
                 type = symbol.getType();
+            }
+        }
+
+        List<Symbol> params = symbolTable.getParameters(methodName);
+
+        if(params != null){
+            for(Symbol symbol : params){
+                if(symbol.getName().equals(varRefNode.get("name"))){
+                    type = symbol.getType();
+                }
             }
         }
 
