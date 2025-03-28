@@ -1,5 +1,6 @@
 package pt.up.fe.comp2025.analysis.passes;
 
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
@@ -10,6 +11,7 @@ import pt.up.fe.comp2025.ast.Kind;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import static pt.up.fe.comp2025.ast.Kind.*;
@@ -30,6 +32,20 @@ public class Assignment extends AnalysisVisitor {
 
         Type typeExpr1 = getExprType(expr1);
         Type typeExpr2 = getExprType(expr2);
+
+        if(VAR_REF_EXPR.check(expr1)){
+            typeExpr1 = varType(expr1,symbolTable);
+        }
+
+        if(VAR_REF_EXPR.check(expr2)){
+            typeExpr2 = varType(expr2,symbolTable);
+        }
+
+        if (isAssignableByImport(typeExpr1,typeExpr2,symbolTable)) {
+            assignStmt.putObject("type",storeType(typeExpr1,symbolTable));
+            assignStmt.putObject("type",storeType(typeExpr2,symbolTable));
+            return null;
+        }
 
         //Assignments lhs may only be of type id[expr] or id
         if(!(ARRAY_ACCESS.check(expr1) && VAR_REF_EXPR.check(expr1.getChild(0)))&& !VAR_REF_EXPR.check(expr1) && !OBJECT_REFERENCE.check(expr1)){
@@ -68,4 +84,30 @@ public class Assignment extends AnalysisVisitor {
         return null;
     }
 
+    private Type varType(JmmNode varRefNode, SymbolTable symbolTable){
+        Type type = null;
+        JmmNode method = varRefNode.getParent().getParent();
+        String methodName = method.get("name");
+
+        List<Symbol> varsFromMethod = symbolTable.getLocalVariables(methodName);
+
+        for(Symbol symbol : varsFromMethod){
+            if(symbol.getName().equals(varRefNode.get("name"))){
+                type = symbol.getType();
+            }
+        }
+
+        List<Symbol> fields = symbolTable.getFields();
+
+        for(Symbol symbol : fields){
+            if(symbol.getName().equals(varRefNode.get("name"))){
+                type = symbol.getType();
+            }
+        }
+
+        return type;
+    }
+
 }
+
+

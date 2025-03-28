@@ -152,4 +152,12 @@ public class TypeUtils {
             return true;
         return sourceType.hasAttribute("imported") && destinationType.hasAttribute("imported");
     }
+
+    public  static boolean isAssignableByImport(Type sourceType, Type destinationType, SymbolTable symbolTable){
+        if(symbolTable.getImports().contains(sourceType.getName()) && symbolTable.getImports().contains(destinationType.getName())){
+            return true;
+        }
+
+        return false;
+    }
 }
