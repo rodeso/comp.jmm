@@ -86,7 +86,7 @@ public class TypeUtils {
                 case BINARY_EXPR -> getBinaryExprType(expr);
                 case UNARY_EXPR -> getUnaryExprType(expr);
                 case INTEGER_LITERAL -> newIntType();
-                case BOOL_LITERAL -> newBooleanType();
+                case BOOLEAN_LITERAL -> newBooleanType();
                 case ARRAY_CREATION -> getArrayCreation(expr);
                 case ARRAY_ACCESS -> getArrayElementType(expr);
                 case CLASS_FUNCTION_EXPR -> getFunctionCallType(expr);
