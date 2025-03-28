@@ -92,6 +92,7 @@ public class TypeUtils {
                 case CLASS_FUNCTION_EXPR -> getFunctionCallType(expr);
                 case PRIORITY_EXPR -> getExprType(expr.getChild(0));
                 case VAR_REF_EXPR -> getVarExprType(expr);
+                case ARRAY_LITERAL -> getArrayLiteral(expr);
                 default -> throw new UnsupportedOperationException("Can't compute type for expression kind '" + kind + "'");
             };
         }
@@ -120,7 +121,8 @@ public class TypeUtils {
      * Assumes the node has an attribute "type" with the base type.
      */
     private static Type getArrayCreation(JmmNode expr) {
-        String type = expr.get("type");
+        // in array creation the first child is always type and type only has one child that is the baseType
+        String type = expr.getChild(0).getChild(0).get("name");
         return new Type(type, true);
     }
 
@@ -143,6 +145,10 @@ public class TypeUtils {
     private static Type getFunctionCallType(JmmNode functionCall) {
         String methodName = functionCall.get("name");
         return new Type("int", false);
+    }
+
+    private static Type getArrayLiteral(JmmNode arrayLiteral){
+        return new Type("int",true);
     }
 
     public static boolean isAssignable(Type sourceType, Type destinationType) {
