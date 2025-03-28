@@ -60,9 +60,33 @@ public class FunctionCall extends AnalysisVisitor {
                     message,
                     null)
             );
+            return null;
         }
 
+        if(funcParams.size() > funcCall.getNumChildren()-1){
+            var message = String.format("Function '%s' takes '%d' parameters '%d' provided.", funcName,funcParams.size(),funcCall.getNumChildren()-1);
+            addReport(Report.newError(
+                    Stage.SEMANTIC,
+                    funcCall.getLine(),
+                    funcCall.getColumn(),
+                    message,
+                    null)
+            );
+        }
 
+        for(int i=0; i<funcParams.size();i++){
+            Type passedParamType = varType(funcCall.getChild(i+1),method,table);
+            if(!funcParams.get(i).getType().equals(passedParamType)){
+                var message = "At least one parameter does not match function definition.";
+                addReport(Report.newError(
+                        Stage.SEMANTIC,
+                        funcCall.getLine(),
+                        funcCall.getColumn(),
+                        message,
+                        null)
+                );
+            }
+        }
 
 
 
