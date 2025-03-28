@@ -21,20 +21,12 @@ public class TypeUtils {
         return new Type("int", false);
     }
 
-    public static Type newFloatType() {
-        return new Type("float", false);
-    }
-
     public static Type newStringType() {
         return new Type("String", false);
     }
 
     public static Type newBooleanType() {
         return new Type("boolean", false);
-    }
-
-    public static Type newDoubleType() {
-        return new Type("double", false);
     }
 
     private static Type getUnaryExprType(JmmNode unaryExpr) {

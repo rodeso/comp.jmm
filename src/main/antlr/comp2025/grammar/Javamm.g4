@@ -8,8 +8,6 @@ CLASS : 'class' ;
 INT : 'int' ;
 BOOL : 'boolean' ;
 STRING : 'String';
-DOUBLE : 'double';
-FLOAT : 'float';
 PUBLIC : 'public' ;
 RETURN : 'return' ;
 
@@ -51,8 +49,6 @@ type
 baseType
     : name=INT
     | name=BOOL
-    | name=DOUBLE
-    | name=FLOAT
     | name=STRING
     | name=INT '...'
     | name=ID
