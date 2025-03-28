@@ -48,6 +48,11 @@ public class FunctionCall extends AnalysisVisitor {
         if(imports.contains(objectType.getName()) || objectType.getName().equals("imported"))
             return null;
 
+        boolean superClass = method.getParent().getObject("isSub", Boolean.class);
+
+        if(superClass)
+            return null;
+
 
         List<Symbol> funcParams = table.getParameters(funcName);
 
@@ -72,6 +77,7 @@ public class FunctionCall extends AnalysisVisitor {
                     message,
                     null)
             );
+            return null;
         }
 
         for(int i=0; i<funcParams.size();i++){
