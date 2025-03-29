@@ -255,4 +255,12 @@ public class SemanticAnalysisTest {
         System.out.println(result.getReports());
     }
 
+    @Test
+    public void VarDeclTwiceInFunc() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarDeclTwiceInFunc.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
 }

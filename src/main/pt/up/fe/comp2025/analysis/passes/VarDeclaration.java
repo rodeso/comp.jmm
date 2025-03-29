@@ -9,6 +9,8 @@ import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class VarDeclaration extends AnalysisVisitor {
     @Override
@@ -21,9 +23,12 @@ public class VarDeclaration extends AnalysisVisitor {
 
         if(Kind.METHOD_DECL.check(parent)){
             List<Symbol> locals = table.getLocalVariables(parent.get("name"));
-            for(Symbol symbol : locals){
-                if(symbol.getName().equals(varDecl.get("name"))){
-                    var message = "Expressions in If must return a boolean";
+
+            Map<String, Long> localsCount = locals.stream()
+                    .collect(Collectors.groupingBy(Symbol::getName, Collectors.counting()));
+            for(Map.Entry<String,Long> local : localsCount.entrySet()){
+                if(local.getValue() > 1){
+                    var message = String.format("Local variable '%s' is duplicated",local.getKey());
                     addReport(Report.newError(
                             Stage.SEMANTIC,
                             varDecl.getLine(),
@@ -37,9 +42,11 @@ public class VarDeclaration extends AnalysisVisitor {
 
         if(Kind.CLASS_DECL.check(parent)){
             List<Symbol> fields = table.getFields();
-            for(Symbol symbol: fields){
-                if(symbol.getName().equals(varDecl.get("name"))){
-                    var message = "Duplicated field";
+            Map<String, Long> fieldsCount = fields.stream()
+                    .collect(Collectors.groupingBy(Symbol::getName, Collectors.counting()));
+            for(Map.Entry<String,Long> field : fieldsCount.entrySet()){
+                if(field.getValue() > 1){
+                    var message = String.format("Field '%s' is duplicated",field.getKey());
                     addReport(Report.newError(
                             Stage.SEMANTIC,
                             varDecl.getLine(),
