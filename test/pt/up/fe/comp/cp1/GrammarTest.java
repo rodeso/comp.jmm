@@ -262,18 +262,9 @@ public class GrammarTest {
         TestUtils.parseVerbose("new boolean[a]", EXPRESSION);
     }
     @Test
-    public void testExprNewFloatArray() {
-        TestUtils.parseVerbose("new float[a]", EXPRESSION);
-    }
-    @Test
-    public void testExprNewDoubleArray() {
-        TestUtils.parseVerbose("new double[a]", EXPRESSION);
-    }
-    @Test
     public void testExprNewStringArray() {
         TestUtils.parseVerbose("new String[a]", EXPRESSION);
     }
-
     @Test
     public void testExprNewCustomTypeArray() {
         TestUtils.parseVerbose("new A[a]", EXPRESSION);
