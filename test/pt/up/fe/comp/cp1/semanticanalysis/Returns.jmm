@@ -1,0 +1,42 @@
+import A;
+class Returns {
+    int x;
+    A a;
+    public static void main(String[] args) {
+
+    }
+
+    public int foo() {
+        return x;
+    }
+
+    public A test1(){
+        return a;
+    }
+
+    public int returnExpr(){
+        return x + 1;
+    }
+
+    public boolean returnLiteral(){
+        return true;
+    }
+
+    public int returnLiteral2(){
+        return 1;
+    }
+
+    public boolean returnLocal(){
+        boolean b;
+        return b;
+    }
+
+    public int returnParam(int a){
+        return a;
+    }
+
+    public int[] returnArray(){
+        int[] c;
+        return c;
+    }
+}

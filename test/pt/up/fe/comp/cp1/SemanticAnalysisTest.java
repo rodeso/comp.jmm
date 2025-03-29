@@ -51,6 +51,12 @@ public class SemanticAnalysisTest {
     }
 
     @Test
+    public void arrayCreationWithoutInt() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayCreationWithoutInt.jmm"));
+        TestUtils.mustFail(result);
+    }
+
+    @Test
     public void arrayIndexNotInt() {
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayIndexNotInt.jmm"));
         TestUtils.mustFail(result);
@@ -184,5 +190,69 @@ public class SemanticAnalysisTest {
         System.out.println(result.getReports());
     }
 
+
+    @Test
+    public void returns() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Returns.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+
+    @Test
+    public void BadMethodCall() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/BadMethodCall.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void MethodWithZeroParams() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/MethodWithZeroParams.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void DuplicatedMethod() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/DuplicatedMethod.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void DuplicatedParam() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/DuplicatedParam.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void AssignBadFunc() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/AssignBadFunc.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void AssignFunc() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/AssignFunc.jmm"));
+        TestUtils.noErrors(result);
+        System.out.println(result.getReports());
+    }
+
+
+    @Test
+    public void VarDeclTwice() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarDeclTwice.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
 
 }

@@ -10,6 +10,8 @@ import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static pt.up.fe.comp2025.ast.TypeUtils.getExprType;
 
@@ -22,7 +24,41 @@ public class MethodDeclaration extends AnalysisVisitor {
 
 
     private Void visitMethodDecl(JmmNode methodDecl, SymbolTable table){
-        if(methodDecl.get("name").equals("main"))
+        String methodName = methodDecl.get("name");
+        long methodsWithTheSameName = table.getMethods().stream().filter(name -> name.equals(methodName)).count();
+        if(methodsWithTheSameName > 1){
+            var message = String.format("Methods can only have one definition");
+            addReport(Report.newError(
+                    Stage.SEMANTIC,
+                    methodDecl.getLine(),
+                    methodDecl.getColumn(),
+                    message,
+                    null)
+            );
+            return null;
+        }
+
+        List<Symbol> parameters = table.getParameters(methodName);
+        Map<String, Long> parameterCounts = parameters.stream()
+                .collect(Collectors.groupingBy(Symbol::getName, Collectors.counting()));
+
+        if(!parameterCounts.isEmpty()){
+            for(Map.Entry<String,Long> paramCount : parameterCounts.entrySet()){
+                if(paramCount.getValue() > 1){
+                    var message = String.format("Parameter '%s' is not unique",paramCount.getKey());
+                    addReport(Report.newError(
+                            Stage.SEMANTIC,
+                            methodDecl.getLine(),
+                            methodDecl.getColumn(),
+                            message,
+                            null)
+                    );
+                    return null;
+                }
+            }
+        }
+
+        if(methodName.equals("main"))
             return null;
         JmmNode returnExpr = methodDecl.getChild(methodDecl.getNumChildren()-1);
 

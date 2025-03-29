@@ -31,7 +31,7 @@ public class FunctionCall extends AnalysisVisitor {
 
         JmmNode method = funcCall.getParent();
 
-        if(Kind.SIMPLE_EXPR.check(method))
+        if(Kind.SIMPLE_EXPR.check(method) || Kind.ASSIGN_STMT.check(method))
             method = method.getParent();
 
         if(Kind.VAR_REF_EXPR.check(object)){

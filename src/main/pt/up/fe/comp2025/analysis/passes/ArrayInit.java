@@ -1,5 +1,6 @@
 package pt.up.fe.comp2025.analysis.passes;
 
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
@@ -24,7 +25,23 @@ public class ArrayInit extends AnalysisVisitor {
     }
 
     private Void visitArrayCreation(JmmNode array, SymbolTable symbolTable) {
+        JmmNode arraySize = array.getChild(1);
+        Type arraySizeType = getExprType(arraySize);
 
+        JmmNode method = array.getParent().getParent();//Array creation is inside assignment
+        if(Kind.VAR_REF_EXPR.check(arraySize))
+            arraySizeType = varType(arraySize,method,symbolTable);
+
+        if(!arraySizeType.equals(new Type("int",false))){
+            var message = "Array size must be int";
+            addReport(Report.newError(
+                    Stage.SEMANTIC,
+                    array.getLine(),
+                    array.getColumn(),
+                    message,
+                    null)
+            );
+        }
 
 
         return null;
@@ -56,6 +73,13 @@ public class ArrayInit extends AnalysisVisitor {
         JmmNode index = array.getChild(1);
         Type exprType = getExprType(expr);
 
+        JmmNode method = array.getParent();
+
+        if(Kind.VAR_REF_EXPR.check(expr))
+            exprType = varType(expr,method,table);
+
+
+
         if (exprType == null) {
         
             String message = String.format("ArrayAccess Error: Null type");
@@ -80,6 +104,9 @@ public class ArrayInit extends AnalysisVisitor {
         }
 
         Type indexType = getExprType(index);
+
+        if(Kind.VAR_REF_EXPR.check(index))
+            indexType = varType(index,method,table);
         if (indexType == null) {
             String message = String.format("ArrayAccess Error: Null index type");
             addReport(Report.newError(
@@ -104,6 +131,46 @@ public class ArrayInit extends AnalysisVisitor {
 
 
         return null;
+    }
+
+
+    private Type varType(JmmNode varRefNode,JmmNode method, SymbolTable symbolTable){
+        Type type = null;
+
+        String methodName = method.get("name");
+
+        List<Symbol> varsFromMethod = symbolTable.getLocalVariables(methodName);
+        if(varsFromMethod != null){
+            for(Symbol symbol : varsFromMethod){
+                if(symbol.getName().equals(varRefNode.get("name"))){
+                    type = symbol.getType();
+                }
+            }
+        }
+
+
+        List<Symbol> fields = symbolTable.getFields();
+
+        if(fields != null){
+            for(Symbol symbol : fields){
+                if(symbol.getName().equals(varRefNode.get("name"))){
+                    type = symbol.getType();
+                }
+            }
+        }
+
+        List<Symbol> params = symbolTable.getParameters(methodName);
+
+        if(params != null){
+            for(Symbol symbol : params){
+                if(symbol.getName().equals(varRefNode.get("name"))){
+                    type = symbol.getType();
+                }
+            }
+        }
+
+
+        return type;
     }
 
 }

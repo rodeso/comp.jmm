@@ -1,0 +1,19 @@
+import A;
+class DuplicatedParam {
+    int[] x;
+    int[] x;
+    public static void main(String[] args) {
+
+    }
+
+    public int[] foo() {
+        DuplicatedParam a;
+        a = new DuplicatedParam();
+
+        x = a.foo();
+
+        return x;
+    }
+
+
+}

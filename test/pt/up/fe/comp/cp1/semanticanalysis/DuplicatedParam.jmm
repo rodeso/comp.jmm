@@ -1,0 +1,18 @@
+import A;
+class DuplicatedParam {
+
+    public static void main(String[] args) {
+
+    }
+
+    public int foo(int c, int c, boolean d) {
+        DuplicatedParam a;
+        a = new DuplicatedParam();
+
+        a.foo();
+
+        return 0;
+    }
+
+
+}

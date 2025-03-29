@@ -1,0 +1,20 @@
+class MethodWithZeroParams {
+    int x;
+    public static void main(String[] args) {
+
+    }
+
+    public int foo() {
+        int[] a;
+        int b;
+        a = new int[b];
+        return x;
+    }
+
+    public int bar(){
+        MethodWithZeroParams c;
+        c = new MethodWithZeroParams();
+        x = c.foo();
+        return x;
+    }
+}

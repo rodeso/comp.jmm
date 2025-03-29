@@ -41,6 +41,10 @@ public class Assignment extends AnalysisVisitor {
             typeExpr2 = varType(expr2,symbolTable);
         }
 
+        if(CLASS_FUNCTION_EXPR.check(expr2)){
+            typeExpr2 = symbolTable.getReturnType(expr2.get("name"));
+        }
+
 
 
         if (isAssignableByImport(typeExpr1,typeExpr2,symbolTable)) {
