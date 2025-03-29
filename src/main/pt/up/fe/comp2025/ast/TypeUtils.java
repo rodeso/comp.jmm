@@ -125,9 +125,9 @@ public class TypeUtils {
     private static Type getArrayElementType(JmmNode arrayAccess) {
         JmmNode arrayExpr = arrayAccess.getChild(0);
         Type arrayType = getExprType(arrayExpr);
-        if (!arrayType.isArray()) {
-            throw new RuntimeException("Attempting to access a non-array type: " + arrayType.getName());
-        }
+//        if (!arrayType.isArray()) { this is now checked int the semantics
+//            throw new RuntimeException("Attempting to access a non-array type: " + arrayType.getName());
+//        }
         return new Type(arrayType.getName(), false);
     }
 

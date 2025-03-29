@@ -1,0 +1,8 @@
+class VarargsWrong {
+
+
+
+    public int varargs(int... a, boolean b) {
+        return a[0];
+    }
+}

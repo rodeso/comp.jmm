@@ -68,6 +68,9 @@ public class FunctionCall extends AnalysisVisitor {
             return null;
         }
 
+        if(funcCall.getNumChildren()==1 && funcParams.isEmpty())
+            return null;
+
         if(funcParams.size() > funcCall.getNumChildren()-1){
             var message = String.format("Function '%s' takes '%d' parameters '%d' provided.", funcName,funcParams.size(),funcCall.getNumChildren()-1);
             addReport(Report.newError(
@@ -79,10 +82,40 @@ public class FunctionCall extends AnalysisVisitor {
             );
             return null;
         }
+        if(funcParams.isEmpty()){
+            var message = "Too many arguments.";
+            addReport(Report.newError(
+                    Stage.SEMANTIC,
+                    funcCall.getLine(),
+                    funcCall.getColumn(),
+                    message,
+                    null)
+            );
+            return null;
+        }
+        Symbol lastParam = funcParams.getLast();
+
+        if(!lastParam.getType().getName().equals("int...")){
+            if(funcParams.size() < funcCall.getNumChildren()-1){
+                var message = "Too many arguments.";
+                addReport(Report.newError(
+                        Stage.SEMANTIC,
+                        funcCall.getLine(),
+                        funcCall.getColumn(),
+                        message,
+                        null)
+                );
+            }
+        }
 
         for(int i=0; i<funcParams.size();i++){
-            Type passedParamType = varType(funcCall.getChild(i+1),method,table);
+            Type passedParamType = getExprType(funcCall.getChild(i+1));
+            if(Kind.VAR_REF_EXPR.check(funcCall.getChild(i+1)))
+                passedParamType =varType(funcCall.getChild(i+1),method,table);
+
             if(!funcParams.get(i).getType().equals(passedParamType)){
+                if(passedParamType.getName().equals("int") && funcParams.get(i).getType().getName().equals("int..."))
+                    continue;
                 var message = "At least one parameter does not match function definition.";
                 addReport(Report.newError(
                         Stage.SEMANTIC,

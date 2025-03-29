@@ -75,6 +75,9 @@ public class ArrayInit extends AnalysisVisitor {
 
         JmmNode method = array.getParent();
 
+        if(Kind.ASSIGN_STMT.check(method))
+            method = method.getParent();
+
         if(Kind.VAR_REF_EXPR.check(expr))
             exprType = varType(expr,method,table);
 
@@ -92,7 +95,7 @@ public class ArrayInit extends AnalysisVisitor {
             );
         }
 
-        if (!exprType.isArray()) {
+        if (!exprType.isArray() && !exprType.getName().equals("int...")) {
             String message = String.format("ArrayAccess Error: Not an array");
             addReport(Report.newError(
                     Stage.SEMANTIC,

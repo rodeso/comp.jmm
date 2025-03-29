@@ -159,6 +159,20 @@ public class SemanticAnalysisTest {
     }
 
     @Test
+    public void varargsWithoutThis() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarargsWithoutThis.jmm"));
+        TestUtils.noErrors(result);
+    }
+    @Test
+    public void varargsWrongWithoutThis() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarargsWrongWithoutThis.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
     public void arrayInit() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayInit.jmm"));
@@ -259,6 +273,53 @@ public class SemanticAnalysisTest {
     public void VarDeclTwiceInFunc() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarDeclTwiceInFunc.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void AssignArray() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/AssignArray.jmm"));
+        TestUtils.noErrors(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void AssignArrayBad() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/AssignArrayBad.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void AssignArrayBad2() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/AssignArrayBad2.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void CallWithToManyParams() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/CallWithToManyParams.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void CallWithVarArgs() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/CallWithVarArgs.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void ReturnVarargs() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ReturnVarargs.jmm"));
         TestUtils.mustFail(result);
         System.out.println(result.getReports());
     }

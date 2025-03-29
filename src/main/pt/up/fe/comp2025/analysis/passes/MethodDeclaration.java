@@ -58,6 +58,24 @@ public class MethodDeclaration extends AnalysisVisitor {
             }
         }
 
+        if(!parameters.isEmpty()){
+            for(int i=0;i<parameters.size()-1;i++){
+                if(parameters.get(i).getType().getName().equals("int...")){
+                    var message = String.format("Varargs must be the last parameter");
+                    addReport(Report.newError(
+                            Stage.SEMANTIC,
+                            methodDecl.getLine(),
+                            methodDecl.getColumn(),
+                            message,
+                            null)
+                    );
+                }
+            }
+        }
+
+
+
+
         if(methodName.equals("main"))
             return null;
         JmmNode returnExpr = methodDecl.getChild(methodDecl.getNumChildren()-1);
@@ -65,11 +83,28 @@ public class MethodDeclaration extends AnalysisVisitor {
         Type type = table.getReturnType(methodDecl.get("name"));
         Type returnType = getExprType(returnExpr);
 
+        if(type.getName().equals("int...")){
+            var message = String.format("Method can not return varargs");
+            addReport(Report.newError(
+                    Stage.SEMANTIC,
+                    methodDecl.getLine(),
+                    methodDecl.getColumn(),
+                    message,
+                    null)
+            );
+        }
         if(Kind.VAR_REF_EXPR.check(returnExpr)){
-            returnType = varType(returnExpr,table);
+            returnType = varType(returnExpr,methodDecl,table);
+        }
+
+        if(Kind.ARRAY_ACCESS.check(returnExpr)){
+            returnType = varType((returnExpr.getChild(0)),methodDecl,table);
+            returnType = new Type(returnType.getName(),false);
         }
 
         if(!type.equals(returnType)){
+            if(returnType.getName().equals("int...") && type.getName().equals("int"))
+                return null;
             var message = String.format("Method of type '%s' can not return %s.",type,returnType.toString());
             addReport(Report.newError(
                     Stage.SEMANTIC,
@@ -86,9 +121,8 @@ public class MethodDeclaration extends AnalysisVisitor {
     }
 
 
-    private Type varType(JmmNode varRefNode, SymbolTable symbolTable){
+    private Type varType(JmmNode varRefNode,JmmNode method, SymbolTable symbolTable){
         Type type = null;
-        JmmNode method = varRefNode.getParent();
         String methodName = method.get("name");
 
         List<Symbol> varsFromMethod = symbolTable.getLocalVariables(methodName);

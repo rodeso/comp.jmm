@@ -1,0 +1,17 @@
+class ArrayIndexNotInt {
+
+    public static void main(String[] args) {
+
+    }
+
+    public boolean foo() {
+        int[] a;
+        boolean b;
+
+        b = a[0];
+
+        return b;
+    }
+
+
+}

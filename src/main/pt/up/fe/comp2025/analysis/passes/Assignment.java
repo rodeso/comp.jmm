@@ -30,16 +30,28 @@ public class Assignment extends AnalysisVisitor {
         JmmNode expr1 = assignStmt.getChild(0);
         JmmNode expr2 = assignStmt.getChild(1);
 
+        JmmNode method = assignStmt.getParent();
         Type typeExpr1 = getExprType(expr1);
         Type typeExpr2 = getExprType(expr2);
 
         if(VAR_REF_EXPR.check(expr1)){
-            typeExpr1 = varType(expr1,symbolTable);
+            typeExpr1 = varType(expr1,method,symbolTable);
         }
 
         if(VAR_REF_EXPR.check(expr2)){
-            typeExpr2 = varType(expr2,symbolTable);
+            typeExpr2 = varType(expr2,method,symbolTable);
         }
+
+        if(ARRAY_ACCESS.check(expr1)){
+            typeExpr1 = varType(expr1.getChild(0),method,symbolTable);
+            typeExpr1 = new Type(typeExpr1.getName(),false);
+        }
+
+        if(ARRAY_ACCESS.check(expr2)){
+            typeExpr2 = varType(expr2.getChild(0),method,symbolTable);
+            typeExpr2 = new Type(typeExpr2.getName(),false);
+        }
+
 
         if(CLASS_FUNCTION_EXPR.check(expr2)){
             typeExpr2 = symbolTable.getReturnType(expr2.get("name"));
@@ -90,9 +102,9 @@ public class Assignment extends AnalysisVisitor {
         return null;
     }
 
-    private Type varType(JmmNode varRefNode, SymbolTable symbolTable){
+    private Type varType(JmmNode varRefNode,JmmNode method, SymbolTable symbolTable){
         Type type = null;
-        JmmNode method = varRefNode.getParent().getParent();
+
         String methodName = method.get("name");
 
         List<Symbol> varsFromMethod = symbolTable.getLocalVariables(methodName);

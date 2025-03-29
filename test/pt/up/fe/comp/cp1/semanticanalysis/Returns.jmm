@@ -39,4 +39,9 @@ class Returns {
         int[] c;
         return c;
     }
+
+    public int returnArrayPos(){
+            int[] c;
+            return c[0];
+    }
 }

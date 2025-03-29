@@ -1,0 +1,15 @@
+class Varargs {
+
+
+    public int varargs(int... a) {
+        return a[0];
+    }
+
+    public int bar(){
+        Varargs a;
+        a = new Varargs();
+        a.varargs(1,2,3);
+
+        return 1;
+    }
+}

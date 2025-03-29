@@ -132,6 +132,8 @@ public class JmmSymbolTableBuilder {
                 return TypeUtils.newIntType(); // Default to int type if missing
             }
 
+
+
             return new Type(typeName, false);
         } else if (Kind.TYPE.check(typeNode)) {
             String typeName = typeNode.getChildren().get(0).getOptional("name").orElse(null);
@@ -143,6 +145,13 @@ public class JmmSymbolTableBuilder {
             String op2 = typeNode.getOptional("op2").orElse("");
             if(op1.equals("[") && op2.equals("]")){
                 isArray=true;
+            }
+
+            String varargs = typeNode.getChild(0).getOptional("args").orElse(null);
+
+            if(varargs!=null){
+                typeName = typeName + "...";
+                isArray = true;
             }
             return new Type(typeName, isArray);
         }

@@ -1,0 +1,7 @@
+class Varargs {
+
+
+    public int varargs(int... a) {
+        return a[0];
+    }
+}

@@ -50,7 +50,7 @@ baseType
     : name=INT
     | name=BOOL
     | name=STRING
-    | name=INT '...'
+    | name=INT args='...'
     | name=ID
     | name='void'
     ;
