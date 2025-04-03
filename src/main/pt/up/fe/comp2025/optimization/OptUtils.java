@@ -2,11 +2,10 @@ package pt.up.fe.comp2025.optimization;
 
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
+import static pt.up.fe.comp2025.ast.Kind.TYPE;
 import pt.up.fe.comp2025.ast.TypeUtils;
 import pt.up.fe.specs.util.collections.AccumulatorMap;
 import pt.up.fe.specs.util.exceptions.NotImplementedException;
-
-import static pt.up.fe.comp2025.ast.Kind.TYPE;
 
 /**
  * Utility methods related to the optimization middle-end.
@@ -53,6 +52,10 @@ public class OptUtils {
 
         String type = "." + switch (typeName) {
             case "int" -> "i32";
+            case "boolean" -> "boolean";
+            case "void" -> "Void";
+            case "String" -> "String";
+            case "int[]" -> "array.i32";
             default -> throw new NotImplementedException(typeName);
         };
 

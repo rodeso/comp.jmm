@@ -1,14 +1,19 @@
 package pt.up.fe.comp2025.optimization;
 
+import java.util.stream.Collectors;
+
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
+import static pt.up.fe.comp2025.ast.Kind.ASSIGN_STMT;
+import static pt.up.fe.comp2025.ast.Kind.CLASS_DECL;
+import static pt.up.fe.comp2025.ast.Kind.METHOD_DECL;
+import static pt.up.fe.comp2025.ast.Kind.PARAM;
+import static pt.up.fe.comp2025.ast.Kind.PROGRAM;
+import static pt.up.fe.comp2025.ast.Kind.RETURN_STMT;
+import static pt.up.fe.comp2025.ast.Kind.STMT;
 import pt.up.fe.comp2025.ast.TypeUtils;
-
-import java.util.stream.Collectors;
-
-import static pt.up.fe.comp2025.ast.Kind.*;
 
 /**
  * Generates OLLIR code from JmmNodes that are not expressions.
@@ -77,7 +82,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         code.append(typeString);
         code.append(SPACE);
 
-        code.append(rhs.getCode());
+        code.append(rhs.getRef());
 
         code.append(END_STMT);
 
@@ -101,7 +106,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         code.append(ollirTypes.toOllirType(retType));
         code.append(SPACE);
 
-        code.append(expr.getCode());
+        code.append(expr.getRef());
 
         code.append(END_STMT);
 

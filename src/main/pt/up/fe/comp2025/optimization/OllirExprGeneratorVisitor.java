@@ -4,9 +4,10 @@ import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
+import static pt.up.fe.comp2025.ast.Kind.BINARY_EXPR;
+import static pt.up.fe.comp2025.ast.Kind.INTEGER_LITERAL;
+import static pt.up.fe.comp2025.ast.Kind.VAR_REF_EXPR;
 import pt.up.fe.comp2025.ast.TypeUtils;
-
-import static pt.up.fe.comp2025.ast.Kind.*;
 
 /**
  * Generates OLLIR code from JmmNodes that are expressions.
@@ -66,11 +67,11 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
 
         computation.append(code).append(SPACE)
                 .append(ASSIGN).append(resOllirType).append(SPACE)
-                .append(lhs.getCode()).append(SPACE);
+                .append(lhs.getRef()).append(SPACE);
 
         Type type = types.getExprType(node);
         computation.append(node.get("op")).append(ollirTypes.toOllirType(type)).append(SPACE)
-                .append(rhs.getCode()).append(END_STMT);
+                .append(rhs.getRef()).append(END_STMT);
 
         return new OllirExprResult(code, computation);
     }
