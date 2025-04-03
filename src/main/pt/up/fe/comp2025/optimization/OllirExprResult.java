@@ -24,7 +24,7 @@ public class OllirExprResult {
         return computation;
     }
 
-    public String getref() {
+    public String getCode() {
         return ref;
     }
 
