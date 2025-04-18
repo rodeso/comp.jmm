@@ -144,6 +144,13 @@ public class SemanticAnalysisTest {
     }
 
     @Test
+    public void assumeArguments2() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/AssumeArguments2.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
     public void varargs() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Varargs.jmm"));
