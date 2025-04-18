@@ -8,6 +8,7 @@ import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
+import pt.up.fe.comp2025.ast.TypeUtils;
 
 
 import java.util.List;
@@ -26,11 +27,14 @@ public class ArrayInit extends AnalysisVisitor {
 
     private Void visitArrayCreation(JmmNode array, SymbolTable symbolTable) {
         JmmNode arraySize = array.getChild(1);
-        Type arraySizeType = getExprType(arraySize);
+        //Type arraySizeType = getExprType(arraySize);
 
         JmmNode method = array.getParent().getParent();//Array creation is inside assignment
-        if(Kind.VAR_REF_EXPR.check(arraySize))
-            arraySizeType = varType(arraySize,method,symbolTable);
+        TypeUtils typeUtils = new TypeUtils(symbolTable);
+
+        Type arraySizeType = typeUtils.getExprTypeNotStatic(arraySize,method);
+//        if(Kind.VAR_REF_EXPR.check(arraySize))
+//            arraySizeType = varType(arraySize,method,symbolTable);
 
         if(!arraySizeType.equals(new Type("int",false))){
             var message = "Array size must be int";

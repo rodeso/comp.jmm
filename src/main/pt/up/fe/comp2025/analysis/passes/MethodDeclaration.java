@@ -8,6 +8,7 @@ import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
+import pt.up.fe.comp2025.ast.TypeUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,8 @@ public class MethodDeclaration extends AnalysisVisitor {
 
 
     private Void visitMethodDecl(JmmNode methodDecl, SymbolTable table){
+        TypeUtils typeUtils = new TypeUtils(table);
+
         String methodName = methodDecl.get("name");
         long methodsWithTheSameName = table.getMethods().stream().filter(name -> name.equals(methodName)).count();
         if(methodsWithTheSameName > 1){
@@ -81,8 +84,17 @@ public class MethodDeclaration extends AnalysisVisitor {
         JmmNode returnExpr = methodDecl.getChild(methodDecl.getNumChildren()-1);
 
         Type type = table.getReturnType(methodDecl.get("name"));
-        Type returnType = getExprType(returnExpr);
+        Type returnType = typeUtils.getExprTypeNotStatic(returnExpr,methodDecl);
+        //Type returnType = getExprType(returnExpr);
 
+        if(returnType == null && Kind.CLASS_FUNCTION_EXPR.check(returnExpr)){
+            JmmNode object = returnExpr.getChild(0);
+            Type objectType = typeUtils.getExprTypeNotStatic(object,methodDecl);
+            List<String> imports = table.getImports();
+
+            if(imports.contains(objectType.getName()))
+                return null;
+        }
         if(type.getName().equals("int...")){
             var message = String.format("Method can not return varargs");
             addReport(Report.newError(
@@ -93,14 +105,14 @@ public class MethodDeclaration extends AnalysisVisitor {
                     null)
             );
         }
-        if(Kind.VAR_REF_EXPR.check(returnExpr)){
-            returnType = varType(returnExpr,methodDecl,table);
-        }
-
-        if(Kind.ARRAY_ACCESS.check(returnExpr)){
-            returnType = varType((returnExpr.getChild(0)),methodDecl,table);
-            returnType = new Type(returnType.getName(),false);
-        }
+//        if(Kind.VAR_REF_EXPR.check(returnExpr)){
+//            returnType = varType(returnExpr,methodDecl,table);
+//        }
+//
+//        if(Kind.ARRAY_ACCESS.check(returnExpr)){
+//            returnType = varType((returnExpr.getChild(0)),methodDecl,table);
+//            returnType = new Type(returnType.getName(),false);
+//        }
 
         if(!type.equals(returnType)){
             if(returnType.getName().equals("int...") && type.getName().equals("int"))

@@ -1,10 +1,12 @@
 package pt.up.fe.comp2025.ast;
 
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp2025.symboltable.JmmSymbolTable;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -81,13 +83,24 @@ public class TypeUtils {
                 case BOOLEAN_LITERAL -> newBooleanType();
                 case ARRAY_CREATION -> getArrayCreation(expr);
                 case ARRAY_ACCESS -> getArrayElementType(expr);
-                case CLASS_FUNCTION_EXPR -> getFunctionCallType(expr);
                 case PRIORITY_EXPR -> getExprType(expr.getChild(0));
                 case VAR_REF_EXPR -> getVarExprType(expr);
                 case ARRAY_LITERAL -> getArrayLiteral(expr);
                 default -> throw new UnsupportedOperationException("Can't compute type for expression kind '" + kind + "'");
             };
         }
+    }
+    // fazer funções para ver tipos com a symbol table
+    // parent method might not be necessary in that case give null
+    public Type getExprTypeNotStatic(JmmNode expr,JmmNode method){
+        Kind kind = Kind.fromString(expr.getKind());
+
+        return switch (kind){
+            case CLASS_FUNCTION_EXPR -> getFunctionCallType(expr,this.table);
+            case VAR_REF_EXPR -> varType(expr,method,this.table);
+            case ARRAY_ACCESS -> getArrayAcessType(expr,method,this.table);
+            default -> getExprType(expr);
+        };
     }
 
     private static Type getVarExprType(JmmNode expr) {
@@ -134,9 +147,9 @@ public class TypeUtils {
     /**
      * Resolves the return type function call by querying the symbol table.
      */
-    private static Type getFunctionCallType(JmmNode functionCall) {
+    private static Type getFunctionCallType(JmmNode functionCall, SymbolTable table) {
         String methodName = functionCall.get("name");
-        return new Type("int", false);
+        return table.getReturnType(methodName);
     }
 
     private static Type getArrayLiteral(JmmNode arrayLiteral){
@@ -157,5 +170,49 @@ public class TypeUtils {
         }
 
         return false;
+    }
+
+    private static Type varType(JmmNode varRefNode,JmmNode method, SymbolTable symbolTable){
+        Type type = null;
+        String methodName = method.get("name");
+
+        List<Symbol> varsFromMethod = symbolTable.getLocalVariables(methodName);
+        if(varsFromMethod != null){
+            for(Symbol symbol : varsFromMethod){
+                if(symbol.getName().equals(varRefNode.get("name"))){
+                    type = symbol.getType();
+                }
+            }
+        }
+
+
+        List<Symbol> fields = symbolTable.getFields();
+
+        if(fields != null){
+            for(Symbol symbol : fields){
+                if(symbol.getName().equals(varRefNode.get("name"))){
+                    type = symbol.getType();
+                }
+            }
+        }
+
+        List<Symbol> params = symbolTable.getParameters(methodName);
+
+        if(params != null){
+            for(Symbol symbol : params){
+                if(symbol.getName().equals(varRefNode.get("name"))){
+                    type = symbol.getType();
+                }
+            }
+        }
+
+
+        return type;
+    }
+
+    private static Type getArrayAcessType(JmmNode expr, JmmNode method, SymbolTable table){
+        Type returnType = varType((expr.getChild(0)),method,table);
+        returnType = new Type(returnType.getName(),false);
+        return returnType;
     }
 }

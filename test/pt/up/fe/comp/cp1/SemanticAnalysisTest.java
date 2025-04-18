@@ -323,5 +323,12 @@ public class SemanticAnalysisTest {
         TestUtils.mustFail(result);
         System.out.println(result.getReports());
     }
+// test for reference i don't think it's necessary
+//    @Test
+//    public void FieldReference() {
+//        var result = TestUtils
+//                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/FieldReference.jmm"));
+//        TestUtils.noErrors(result);
+//    }
 
 }

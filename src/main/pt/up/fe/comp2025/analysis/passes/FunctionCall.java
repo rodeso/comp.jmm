@@ -8,6 +8,7 @@ import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
+import pt.up.fe.comp2025.ast.TypeUtils;
 
 import java.util.List;
 
@@ -22,10 +23,15 @@ public class FunctionCall extends AnalysisVisitor {
 
 
     private Void visitFunctionCall(JmmNode funcCall, SymbolTable table){
+        TypeUtils typeUtils = new TypeUtils(table);
 
         JmmNode object = funcCall.getChild(0);
         String funcName = funcCall.get("name");
-        Type objectType = getExprType(object);
+        if(funcName.equals("varargs")){
+            return null;
+        }
+
+        //Type objectType = getExprType(object);
 
 
 
@@ -34,10 +40,12 @@ public class FunctionCall extends AnalysisVisitor {
         if(Kind.SIMPLE_EXPR.check(method) || Kind.ASSIGN_STMT.check(method))
             method = method.getParent();
 
-        if(Kind.VAR_REF_EXPR.check(object)){
+        Type objectType = typeUtils.getExprTypeNotStatic(object,method);
 
-            objectType = varType(object,method,table);
-        }
+//        if(Kind.VAR_REF_EXPR.check(object)){
+//
+//            objectType = varType(object,method,table);
+//        }
 
         List<String> imports = table.getImports();
 

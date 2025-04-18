@@ -8,6 +8,7 @@ import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
+import pt.up.fe.comp2025.ast.TypeUtils;
 
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class ArithmeticOperation extends AnalysisVisitor {
     }
 
     private Void visitBinaryExpr(JmmNode binaryExpr, SymbolTable table) {
+        TypeUtils typeUtils = new TypeUtils(table);
         JmmNode expr1 = binaryExpr.getChild(0);
         JmmNode expr2 = binaryExpr.getChild(1);
 
@@ -32,16 +34,16 @@ public class ArithmeticOperation extends AnalysisVisitor {
         binaryExpr.putObject("type", opType);
 
 
-        Type typeExpr1 = getExprType(expr1);
-        Type typeExpr2 = getExprType(expr2);
+        Type typeExpr1 = typeUtils.getExprTypeNotStatic(expr1,binaryExpr.getParent());
+        Type typeExpr2 = typeUtils.getExprTypeNotStatic(expr2,binaryExpr.getParent());
 
-        if(Kind.VAR_REF_EXPR.check(expr1)){
-            typeExpr1 = varType(expr1, table);
-        }
-
-        if(Kind.VAR_REF_EXPR.check(expr2)){
-            typeExpr2 = varType(expr2, table);
-        }
+//        if(Kind.VAR_REF_EXPR.check(expr1)){
+//            typeExpr1 = varType(expr1, table);
+//        }
+//
+//        if(Kind.VAR_REF_EXPR.check(expr2)){
+//            typeExpr2 = varType(expr2, table);
+//        }
         if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/")) {
 
             assert typeExpr1 != null;

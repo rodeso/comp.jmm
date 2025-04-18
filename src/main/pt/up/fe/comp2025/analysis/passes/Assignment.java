@@ -8,6 +8,7 @@ import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
+import pt.up.fe.comp2025.ast.TypeUtils;
 
 
 import java.util.List;
@@ -27,35 +28,41 @@ public class Assignment extends AnalysisVisitor {
     }
 
     private Void visitAssign(JmmNode assignStmt, SymbolTable symbolTable) {
+        TypeUtils typeUtils = new TypeUtils(symbolTable);
+
         JmmNode expr1 = assignStmt.getChild(0);
         JmmNode expr2 = assignStmt.getChild(1);
 
         JmmNode method = assignStmt.getParent();
-        Type typeExpr1 = getExprType(expr1);
-        Type typeExpr2 = getExprType(expr2);
 
-        if(VAR_REF_EXPR.check(expr1)){
-            typeExpr1 = varType(expr1,method,symbolTable);
-        }
+        Type typeExpr1 = typeUtils.getExprTypeNotStatic(expr1,method);
+        Type typeExpr2 = typeUtils.getExprTypeNotStatic(expr2,method);
 
-        if(VAR_REF_EXPR.check(expr2)){
-            typeExpr2 = varType(expr2,method,symbolTable);
-        }
-
-        if(ARRAY_ACCESS.check(expr1)){
-            typeExpr1 = varType(expr1.getChild(0),method,symbolTable);
-            typeExpr1 = new Type(typeExpr1.getName(),false);
-        }
-
-        if(ARRAY_ACCESS.check(expr2)){
-            typeExpr2 = varType(expr2.getChild(0),method,symbolTable);
-            typeExpr2 = new Type(typeExpr2.getName(),false);
-        }
-
-
-        if(CLASS_FUNCTION_EXPR.check(expr2)){
-            typeExpr2 = symbolTable.getReturnType(expr2.get("name"));
-        }
+//        Type typeExpr1 = getExprType(expr1);
+//        Type typeExpr2 = getExprType(expr2);
+//
+//        if(VAR_REF_EXPR.check(expr1)){
+//            typeExpr1 = varType(expr1,method,symbolTable);
+//        }
+//
+//        if(VAR_REF_EXPR.check(expr2)){
+//            typeExpr2 = varType(expr2,method,symbolTable);
+//        }
+//
+//        if(ARRAY_ACCESS.check(expr1)){
+//            typeExpr1 = varType(expr1.getChild(0),method,symbolTable);
+//            typeExpr1 = new Type(typeExpr1.getName(),false);
+//        }
+//
+//        if(ARRAY_ACCESS.check(expr2)){
+//            typeExpr2 = varType(expr2.getChild(0),method,symbolTable);
+//            typeExpr2 = new Type(typeExpr2.getName(),false);
+//        }
+//
+//
+//        if(CLASS_FUNCTION_EXPR.check(expr2)){
+//            typeExpr2 = symbolTable.getReturnType(expr2.get("name"));
+//        }
 
 
 
