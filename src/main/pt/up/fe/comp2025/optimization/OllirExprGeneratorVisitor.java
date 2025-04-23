@@ -4,10 +4,9 @@ import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
-import static pt.up.fe.comp2025.ast.Kind.BINARY_EXPR;
-import static pt.up.fe.comp2025.ast.Kind.INTEGER_LITERAL;
-import static pt.up.fe.comp2025.ast.Kind.VAR_REF_EXPR;
 import pt.up.fe.comp2025.ast.TypeUtils;
+
+import static pt.up.fe.comp2025.ast.Kind.*;
 
 /**
  * Generates OLLIR code from JmmNodes that are expressions.
@@ -36,6 +35,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(VAR_REF_EXPR, this::visitVarRef);
         addVisit(BINARY_EXPR, this::visitBinExpr);
         addVisit(INTEGER_LITERAL, this::visitInteger);
+        addVisit(BOOLEAN_LITERAL, this::visitBool);
 
 //        setDefaultVisit(this::defaultVisit);
     }
@@ -47,6 +47,15 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         String code = node.get("value") + ollirIntType;
         return new OllirExprResult(code);
     }
+
+    private OllirExprResult visitBool(JmmNode node, Void unused) {
+        var boolType = TypeUtils.newBooleanType();
+        String ollirBoolType = ollirTypes.toOllirType(boolType);
+        String code = node.get("value") + ollirBoolType;
+        return new OllirExprResult(code);
+    }
+
+
 
 
     private OllirExprResult visitBinExpr(JmmNode node, Void unused) {
@@ -80,7 +89,10 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
     private OllirExprResult visitVarRef(JmmNode node, Void unused) {
 
         var id = node.get("name");
-        Type type = types.getExprType(node);
+        JmmNode parent = TypeUtils.getParentMethod(node);
+
+        //Type type = types.getExprType(node);
+        Type type = types.getExprTypeNotStatic(node,parent);
         String ollirType = ollirTypes.toOllirType(type);
 
         String code = id + ollirType;

@@ -61,8 +61,10 @@ public class TypeUtils {
     public static Type convertType(JmmNode typeNode) {
         String name = typeNode.get("name");
         boolean isArray = false;
-        if (typeNode.hasAttribute("array")) {
-            isArray = Boolean.parseBoolean(typeNode.get("array"));
+        String op1 = typeNode.getOptional("op1").orElse("");
+        String op2 = typeNode.getOptional("op2").orElse("");
+        if(op1.equals("[") && op2.equals("]")){
+            isArray=true;
         }
         return new Type(name, isArray);
     }
@@ -214,5 +216,14 @@ public class TypeUtils {
         Type returnType = varType((expr.getChild(0)),method,table);
         returnType = new Type(returnType.getName(),false);
         return returnType;
+    }
+
+    public  static JmmNode getParentMethod(JmmNode node){
+        JmmNode parentMethod = node.getParent();
+        while(!Kind.METHOD_DECL.check(parentMethod)){
+            parentMethod = parentMethod.getParent();
+        }
+
+        return parentMethod;
     }
 }

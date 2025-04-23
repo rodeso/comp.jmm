@@ -2,6 +2,7 @@ package pt.up.fe.comp2025.optimization;
 
 import java.util.stream.Collectors;
 
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
@@ -70,7 +71,8 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         // code to compute self
         // statement has type of lhs
         var left = node.getChild(0);
-        Type thisType = types.getExprType(left);
+        JmmNode method = TypeUtils.getParentMethod(node);
+        Type thisType = types.getExprTypeNotStatic(left,method);
         String typeString = ollirTypes.toOllirType(thisType);
         var varCode = left.get("name") + typeString;
 
@@ -141,8 +143,13 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         // params
         // TODO: Hardcoded for a single parameter, needs to be expanded
-        var paramsCode = visit(node.getChild(1));
-        code.append("(" + paramsCode + ")");
+        code.append("(");
+        for(int i =0 ; i<table.getParameters(name).size();i++){
+            var paramsCode = visit(node.getChild(i));
+            code.append(paramsCode);
+        }
+        code.append(")");
+
 
         // type
         // TODO: Hardcoded for int, needs to be expanded
