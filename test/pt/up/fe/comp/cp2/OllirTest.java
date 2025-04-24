@@ -185,7 +185,7 @@ public class OllirTest {
     @Test
     public void section1_Basic_Assignment() {
         var result = getOllirResult("basic/BasicAssignment.jmm");
-
+        System.out.println(result.getOllirCode());
         compileAssignment(result.getOllirClass());
     }
 
