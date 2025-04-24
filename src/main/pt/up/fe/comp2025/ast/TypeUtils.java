@@ -66,6 +66,9 @@ public class TypeUtils {
      */
     public static Type convertType(JmmNode typeNode) {
         String name = typeNode.get("name");
+        if(Kind.TYPE.check(typeNode)){
+            name = typeNode.getChild(0).get("name");
+        }
         boolean isArray = false;
         String op1 = typeNode.getOptional("op1").orElse("");
         String op2 = typeNode.getOptional("op2").orElse("");
@@ -95,6 +98,7 @@ public class TypeUtils {
                 case VAR_REF_EXPR -> getVarExprType(expr);
                 case ARRAY_LITERAL -> getArrayLiteral(expr);
                 case RETURN_STMT -> getReturnType(expr);
+                case VAR_DECL -> getVarDecl(expr);
                 default -> throw new UnsupportedOperationException("Can't compute type for expression kind '" + kind + "'");
             };
         }
@@ -217,6 +221,18 @@ public class TypeUtils {
 
 
         return type;
+    }
+
+    private static Type getVarDecl(JmmNode node){
+        JmmNode varType = node.getChild(0);
+        String name = varType.getChild(0).get("name");
+        boolean isArray = false;
+        String op1 = varType.getOptional("op1").orElse("");
+        String op2 = varType.getOptional("op2").orElse("");
+        if(op1.equals("[") && op2.equals("]")){
+            isArray=true;
+        }
+        return new Type(name, isArray);
     }
 
     private static Type getArrayAcessType(JmmNode expr, JmmNode method, SymbolTable table){

@@ -1,4 +1,4 @@
-import io;
+import Sys.a.io;
 import Quicksort;
 
 class CompileBasic extends Quicksort {
@@ -15,6 +15,5 @@ class CompileBasic extends Quicksort {
     }
 
 
-    public static void main(String[] args) {
-    }
+
 }
