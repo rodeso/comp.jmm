@@ -43,6 +43,12 @@ public class TypeUtils {
      * Returns the type for a binary expression by checking the operator and the types of the operands.
      */
     private static Type getBinaryExprType(JmmNode binaryExpr) {
+
+        if (!Kind.BINARY_EXPR.check(binaryExpr)) {
+            binaryExpr = binaryExpr.getChild(0);
+        }
+
+
         String operator = binaryExpr.get("op");
 
         return switch (operator) {
@@ -88,6 +94,7 @@ public class TypeUtils {
                 case PRIORITY_EXPR -> getExprType(expr.getChild(0));
                 case VAR_REF_EXPR -> getVarExprType(expr);
                 case ARRAY_LITERAL -> getArrayLiteral(expr);
+                case RETURN_STMT -> getReturnType(expr);
                 default -> throw new UnsupportedOperationException("Can't compute type for expression kind '" + kind + "'");
             };
         }
@@ -225,5 +232,24 @@ public class TypeUtils {
         }
 
         return parentMethod;
+    }
+
+    public static Type getReturnType(JmmNode expr){
+        if(expr.getNumChildren() == 0){
+            return new Type("void",false);
+        }
+        if(expr.getNumChildren() > 1){
+            throw new RuntimeException("Return statement has more than one child");
+        }
+        Kind kind = Kind.fromString(expr.getChild(0).getKind());
+
+        return switch(kind){
+            case INTEGER_LITERAL -> newIntType();
+            case BOOLEAN_LITERAL -> newBooleanType();
+            case BINARY_EXPR -> getBinaryExprType(expr);
+            case UNARY_EXPR -> getUnaryExprType(expr);
+            case VAR_REF_EXPR -> new Type(expr.getChild(0).get("name"),false);
+            default -> throw new RuntimeException("Unknown return type");
+        };
     }
 }

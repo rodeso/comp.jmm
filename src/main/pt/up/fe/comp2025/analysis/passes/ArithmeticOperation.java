@@ -33,9 +33,10 @@ public class ArithmeticOperation extends AnalysisVisitor {
         var op = binaryExpr.get("op");
         binaryExpr.putObject("type", opType);
 
-
-        Type typeExpr1 = typeUtils.getExprTypeNotStatic(expr1,binaryExpr.getParent());
-        Type typeExpr2 = typeUtils.getExprTypeNotStatic(expr2,binaryExpr.getParent());
+        JmmNode expr1Parent = TypeUtils.getParentMethod(expr1);
+        JmmNode expr2Parent = TypeUtils.getParentMethod(expr2);
+        Type typeExpr1 = typeUtils.getExprTypeNotStatic(expr1,expr1Parent);
+        Type typeExpr2 = typeUtils.getExprTypeNotStatic(expr2,expr2Parent);
 
 //        if(Kind.VAR_REF_EXPR.check(expr1)){
 //            typeExpr1 = varType(expr1, table);

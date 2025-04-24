@@ -81,7 +81,7 @@ public class MethodDeclaration extends AnalysisVisitor {
 
         if(methodName.equals("main"))
             return null;
-        JmmNode returnExpr = methodDecl.getChild(methodDecl.getNumChildren()-1);
+        JmmNode returnExpr = methodDecl.getChild(methodDecl.getNumChildren()-1).getChild(0);
 
         Type type = table.getReturnType(methodDecl.get("name"));
         Type returnType = typeUtils.getExprTypeNotStatic(returnExpr,methodDecl);

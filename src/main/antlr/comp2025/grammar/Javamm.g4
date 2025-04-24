@@ -61,7 +61,7 @@ methodDecl locals[boolean isPublic=false]
     : (PUBLIC {$isPublic=true;})?
         type name=ID
         '(' paramList? ')'
-        '{' varDecl* stmt* 'return' expr ';' '}'
+        '{' varDecl* stmt* '}'
     | (PUBLIC {$isPublic=true;})? 'static' 'void' name='main' '(' STRING '[' ']' ID ')' '{' ( varDecl
        )* ( stmt )* '}'
     ;

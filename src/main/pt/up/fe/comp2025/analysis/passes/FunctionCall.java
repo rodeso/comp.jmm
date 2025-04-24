@@ -34,8 +34,7 @@ public class FunctionCall extends AnalysisVisitor {
         //Type objectType = getExprType(object);
 
 
-
-        JmmNode method = funcCall.getParent();
+        JmmNode method = TypeUtils.getParentMethod(funcCall);
 
         if(Kind.SIMPLE_EXPR.check(method) || Kind.ASSIGN_STMT.check(method))
             method = method.getParent();

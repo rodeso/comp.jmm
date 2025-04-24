@@ -77,7 +77,8 @@ public class ArrayInit extends AnalysisVisitor {
         JmmNode index = array.getChild(1);
         Type exprType = getExprType(expr);
 
-        JmmNode method = array.getParent();
+
+        JmmNode method = TypeUtils.getParentMethod(array);
 
         if(Kind.ASSIGN_STMT.check(method))
             method = method.getParent();
