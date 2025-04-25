@@ -33,7 +33,8 @@ public class Assignment extends AnalysisVisitor {
         JmmNode expr1 = assignStmt.getChild(0);
         JmmNode expr2 = assignStmt.getChild(1);
 
-        JmmNode method = assignStmt.getParent();
+        //JmmNode method = assignStmt.getParent();
+        JmmNode method = TypeUtils.getParentMethod(assignStmt);
 
         Type typeExpr1 = typeUtils.getExprTypeNotStatic(expr1,method);
         Type typeExpr2 = typeUtils.getExprTypeNotStatic(expr2,method);
