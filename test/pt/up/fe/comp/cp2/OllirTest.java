@@ -234,6 +234,16 @@ public class OllirTest {
     }
 
     @Test
+    public void section2_Not() {
+        var ollirResult = getOllirResult("arithmetic/Not.jmm");
+        System.out.println(ollirResult.getOllirCode());
+        var method = CpUtils.getMethod(ollirResult, "main");
+
+        CpUtils.assertHasOperation(OperationType.NOTB, method, ollirResult);
+
+    }
+
+    @Test
     public void section3_ControlFlow_If_Simple_Single_goto() {
 
         var result = getOllirResult("control_flow/SimpleIfElseStat.jmm");
