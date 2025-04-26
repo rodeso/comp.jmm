@@ -31,6 +31,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     private final String R_PARENTHESIS =")";
     private final String GOT_TO ="goto";
     private final String COLON =":\n";
+    private final String PUT_FIELD ="putfield";
 
 
     private final SymbolTable table;
@@ -97,10 +98,18 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         // code to compute self
         // statement has type of lhs
         var left = node.getChild(0);
+
+
         JmmNode method = TypeUtils.getParentMethod(node);
         Type thisType = types.getExprTypeNotStatic(left,method);
         String typeString = ollirTypes.toOllirType(thisType);
         var varCode = left.get("name") + typeString;
+
+        if(types.isField(left)){
+            code.append(PUT_FIELD).append(L_PARENTHESIS).append("this,").append(varCode)
+                    .append(",").append(rhs.getRef()).append(R_PARENTHESIS).append(".V").append(END_STMT);
+            return code.toString();
+        }
 
 
         code.append(varCode);
