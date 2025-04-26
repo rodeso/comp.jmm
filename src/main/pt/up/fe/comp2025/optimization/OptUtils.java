@@ -15,11 +15,14 @@ public class OptUtils {
 
     private final AccumulatorMap<String> temporaries;
 
+    private final AccumulatorMap<String> ifBranches;
+
     private final TypeUtils types;
 
     public OptUtils(TypeUtils types) {
         this.types = types;
         this.temporaries = new AccumulatorMap<>();
+        this.ifBranches = new AccumulatorMap<>();
     }
 
 
@@ -36,6 +39,14 @@ public class OptUtils {
         return prefix + nextTempNum;
     }
 
+    public String nextIfBranch(){
+        return nextIfBranch("then");
+    }
+
+    public String nextIfBranch(String prefix){
+        var nextBranchNum = ifBranches.add(prefix) - 1;
+        return prefix + nextBranchNum;
+    }
 
     public String toOllirType(JmmNode typeNode) {
 
@@ -52,7 +63,7 @@ public class OptUtils {
 
         String type = "." + switch (typeName) {
             case "int" -> "i32";
-            case "boolean" -> "boolean";
+            case "boolean" -> "bool";
             case "void" -> "V";
             case "String" -> "String";
             case "int[]" -> "array.i32";

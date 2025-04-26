@@ -1,5 +1,6 @@
 package pt.up.fe.comp2025.optimization;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
@@ -25,6 +26,12 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     private final String R_BRACKET = "}\n";
     private final String IMPORT ="import";
     private final String EXTENDS ="extends";
+    private final String IF ="if";
+    private final String L_PARENTHESIS ="(";
+    private final String R_PARENTHESIS =")";
+    private final String GOT_TO ="goto";
+    private final String COLON =":\n";
+    private final String NEW_LINE ="\n";
 
 
     private final SymbolTable table;
@@ -55,6 +62,9 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(IMPORT_DECL, this::visitImportDecl);
         addVisit(PARAM_LIST, this::visitParamList);
         addVisit(VAR_DECL, this::visitVarDecl);
+        addVisit(IF_STMT, this::visitIfStmt);
+        addVisit(BRACKETS_STMT, this::visitBracketsStmt);
+        addVisit(ELSE_STMT, this::visitElseStmt);
 
 //        setDefaultVisit(this::defaultVisit);
     }
@@ -103,6 +113,62 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         code.append(rhs.getRef());
 
         code.append(END_STMT);
+
+        return code.toString();
+    }
+
+    private String visitIfStmt(JmmNode node, Void unused){
+        StringBuilder code = new StringBuilder();
+
+        var condition = exprVisitor.visit(node.getChild(0));
+
+        code.append(condition.getComputation());
+
+        var then = ollirTypes.nextIfBranch();
+
+        code.append(IF).append(SPACE).append(L_PARENTHESIS).append(condition.getRef()).append(R_PARENTHESIS)
+                .append(SPACE).append(GOT_TO).append(SPACE).append(then).append(END_STMT);
+
+        List<JmmNode> elseIfStmt = node.getChildren(ELSEIF_STMT);
+        List<JmmNode> elseStmt = node.getChildren(ELSE_STMT);
+        List<JmmNode> ifContent = node.getChildren(BRACKETS_STMT);
+
+        for(JmmNode els : elseStmt){
+            code.append(visit(els));
+        }
+        String enfIfNum = "endif"+then.substring(4);
+        code.append(GOT_TO).append(SPACE).append(enfIfNum).append(END_STMT);
+
+        code.append(then).append(COLON);
+
+        for(JmmNode ifExpr : ifContent){
+            code.append(visit(ifExpr));
+        }
+
+        code.append(enfIfNum).append(COLON);
+//        for(int i = 1 ; i<node.getNumChildren(); i++){
+//            code.append(visit(node.getChild(i)));
+//        }
+
+        return code.toString();
+    }
+
+    private String visitElseStmt(JmmNode node, Void unused){
+        StringBuilder code = new StringBuilder();
+
+        for(JmmNode child : node.getChildren()){
+            code.append(visit(child));
+        }
+
+        return code.toString();
+    }
+
+    private String visitBracketsStmt(JmmNode node, Void unused){
+        StringBuilder code = new StringBuilder();
+
+        for(JmmNode child : node.getChildren()){
+            code.append(visit(child));
+        }
 
         return code.toString();
     }

@@ -238,7 +238,7 @@ public class OllirTest {
     }
 
     @Test
-    public void section2_Not() {
+    public void Not() {
         var ollirResult = getOllirResult("arithmetic/Not.jmm");
         System.out.println(ollirResult.getOllirCode());
         var method = CpUtils.getMethod(ollirResult, "main");
@@ -251,6 +251,7 @@ public class OllirTest {
     public void controlFlowIfSimpleSingleGoTo() {
 
         var result = getOllirResult("control_flow/SimpleIfElseStat.jmm");
+        System.out.println(result.getOllirCode());
 
         var method = CpUtils.getMethod(result, "func");
 
