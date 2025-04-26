@@ -189,7 +189,7 @@ public class OllirTest {
     @Test
     public void basicAssignment() {
         var result = getOllirResult("basic/BasicAssignment.jmm");
-
+        System.out.println(result.getOllirCode());
         compileAssignment(result.getOllirClass());
     }
 
@@ -221,11 +221,13 @@ public class OllirTest {
     @Test
     public void arithmeticSimpleAnd() {
         var ollirResult = getOllirResult("arithmetic/Arithmetic_and.jmm");
+
         var method = CpUtils.getMethod(ollirResult, "main");
         var numBranches = CpUtils.getInstructions(CondBranchInstruction.class, method).size();
 
 
         CpUtils.assertTrue("Expected at least 2 branches, found " + numBranches, numBranches >= 2, ollirResult);
+        CpUtils.assertHasOperation(OperationType.ANDB, method, ollirResult);
     }
 
     @Test
@@ -235,6 +237,16 @@ public class OllirTest {
         var method = CpUtils.getMethod(ollirResult, "main");
 
         CpUtils.assertHasOperation(OperationType.LTH, method, ollirResult);
+
+    }
+
+    @Test
+    public void section2_Not() {
+        var ollirResult = getOllirResult("arithmetic/Not.jmm");
+        System.out.println(ollirResult.getOllirCode());
+        var method = CpUtils.getMethod(ollirResult, "main");
+
+        CpUtils.assertHasOperation(OperationType.NOTB, method, ollirResult);
 
     }
 
