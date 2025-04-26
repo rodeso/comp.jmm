@@ -268,4 +268,30 @@ public class TypeUtils {
             default -> throw new RuntimeException("Unknown return type");
         };
     }
+
+    public boolean isField(JmmNode node){
+        JmmNode parentMethod = getParentMethod(node);
+        if(!Kind.VAR_REF_EXPR.check(node)){
+            return false;
+        }
+        boolean isField = false;
+        boolean isLocal = false;
+        boolean isParam = false;
+
+        for(Symbol symbol : table.getFields()){
+            if(symbol.getName().equals(node.get("name")))
+                isField = true;
+        }
+
+        for(Symbol symbol : table.getLocalVariables(parentMethod.get("name"))){
+            if(symbol.getName().equals(node.get("name")))
+                isLocal = true;
+        }
+
+        for(Symbol symbol : table.getParameters(parentMethod.get("name"))){
+            if(symbol.getName().equals(node.get("name")))
+                isParam = true;
+        }
+        return isField && !isLocal && !isParam;
+    }
 }

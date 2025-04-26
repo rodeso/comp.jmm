@@ -31,7 +31,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     private final String R_PARENTHESIS =")";
     private final String GOT_TO ="goto";
     private final String COLON =":\n";
-    private final String NEW_LINE ="\n";
 
 
     private final SymbolTable table;
@@ -79,7 +78,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         Type type = types.getExprTypeNotStatic(node,parent);
         String ollirType = ollirTypes.toOllirType(type);
 
-        code.append(SPACE).append(node.get("name")).append(ollirType);
+        code.append(SPACE).append(node.get("name")).append(ollirType).append(END_STMT);
 
         return code.toString();
 
@@ -147,9 +146,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         }
 
         code.append(enfIfNum).append(COLON);
-//        for(int i = 1 ; i<node.getNumChildren(); i++){
-//            code.append(visit(node.getChild(i)));
-//        }
+
 
         return code.toString();
     }
@@ -182,14 +179,22 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
 
     private String visitReturn(JmmNode node, Void unused) {
-        // TODO: Hardcoded for int type, needs to be expanded
-        Type retType = TypeUtils.newIntType();
+
+        JmmNode retExpr = node.getChild(0);
+
+        Type retType = types.getExprTypeNotStatic(retExpr,TypeUtils.getParentMethod(node));
 
 
         StringBuilder code = new StringBuilder();
 
 
+
+
+
+
         var expr = node.getNumChildren() > 0 ? exprVisitor.visit(node.getChild(0)) : OllirExprResult.EMPTY;
+
+
 
 
         code.append(expr.getComputation());
@@ -315,6 +320,11 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         code.append(L_BRACKET);
         code.append(NL);
         code.append(NL);
+
+        for (var child : node.getChildren(VAR_DECL)) {
+            var result = visit(child);
+            code.append(result);
+        }
 
         code.append(buildConstructor());
         code.append(NL);

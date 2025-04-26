@@ -16,6 +16,9 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
     private static final String SPACE = " ";
     private static final String ASSIGN = ":=";
     private final String END_STMT = ";\n";
+    private final String L_PARENTHESIS ="(";
+    private final String R_PARENTHESIS =")";
+    private final String GET_FIELD ="getfield";
 
     private final SymbolTable table;
 
@@ -115,6 +118,18 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
 
         String code = id + ollirType;
 
+        if(types.isField(node)){
+            StringBuilder computation = new StringBuilder();
+
+            var tmp = ollirTypes.nextTemp();
+
+            computation.append(tmp).append(ollirType).append(SPACE).append(ASSIGN).append(ollirType)
+                    .append(SPACE).append(GET_FIELD).append(L_PARENTHESIS).append("this,").append(code)
+                    .append(R_PARENTHESIS).append(ollirType).append(END_STMT);
+
+            return new OllirExprResult(tmp+ollirType,computation);
+        }
+
         return new OllirExprResult(code);
     }
 
@@ -133,5 +148,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
 
         return OllirExprResult.EMPTY;
     }
+
+
 
 }
