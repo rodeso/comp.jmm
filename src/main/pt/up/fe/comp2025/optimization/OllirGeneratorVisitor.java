@@ -261,6 +261,10 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         // name
         var name = node.get("name");
+
+        if(name.equals("main")){
+            code.append("static ");
+        }
         code.append(name);
 
         // params
@@ -269,7 +273,9 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         if(!table.getParameters(name).isEmpty()){
             code.append(visit(node.getChild(1)));
         }
-
+        if(name.equals("main")){
+            code.append("args.array.String");
+        }
         code.append(")");
 
 
