@@ -7,6 +7,7 @@ import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
+import pt.up.fe.comp2025.ast.TypeUtils;
 
 
 import java.util.List;
@@ -46,7 +47,8 @@ public class ConditionCheck extends AnalysisVisitor {
 
     private Void visitIf(JmmNode ifStmt, SymbolTable symbolTable) {
         JmmNode ifCondition = ifStmt.getChild(0);
-        Type conditionType = getExprType(ifCondition);
+        TypeUtils typeUtils = new TypeUtils(symbolTable);
+        Type conditionType = typeUtils.getExprTypeNotStatic(ifCondition, TypeUtils.getParentMethod(ifCondition));
         if (Objects.equals(conditionType.getName(), "boolean"))
             return null;
 
