@@ -1,0 +1,18 @@
+import io;
+import tra;
+class Arithmetic_less {
+
+
+    public static void main(String[] args) {
+        boolean a;
+        Arithmetic_less b;
+        tra c;
+        Arithmetic_less d;
+        a = 10 < 20;
+        b = new Arithmetic_less();
+        c = new tra(a);
+        d = new Arithmetic_less(a);
+
+    }
+
+}

@@ -6,6 +6,9 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
 import pt.up.fe.comp2025.ast.TypeUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static pt.up.fe.comp2025.ast.Kind.*;
 
 /**
@@ -40,6 +43,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(INTEGER_LITERAL, this::visitInteger);
         addVisit(BOOLEAN_LITERAL, this::visitBool);
         addVisit(UNARY_EXPR, this::visitUnaryExpr);
+        addVisit(NEW,this::visitNewObject);
 
 //        setDefaultVisit(this::defaultVisit);
     }
@@ -131,6 +135,36 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         }
 
         return new OllirExprResult(code);
+    }
+
+    private OllirExprResult visitNewObject(JmmNode node, Void unused){
+        StringBuilder computation = new StringBuilder();
+
+        String objName = node.get("name");
+        String reg = ollirTypes.nextTemp()+"."+objName;
+
+
+        List<String> argRefs = new ArrayList<>();
+
+        for(JmmNode child : node.getChildren()){
+            var res = visit(child);
+            computation.append(res.getComputation());
+            argRefs.add(res.getRef());
+        }
+        computation.append(reg).append(SPACE).append(ASSIGN).append("."+objName).
+                append(SPACE).append("new").append(L_PARENTHESIS).
+                append(objName).append(R_PARENTHESIS).append("."+objName).append(END_STMT);
+
+        computation.append("invokespecial(").append(reg).append(", \"<init>\"");
+
+        for(String arg : argRefs){
+            computation.append(", ").append(arg);
+        }
+
+        computation.append(").V").append(END_STMT);
+
+
+        return new OllirExprResult(reg,computation);
     }
 
     /**

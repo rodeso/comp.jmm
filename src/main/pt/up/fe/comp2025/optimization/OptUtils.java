@@ -3,6 +3,8 @@ package pt.up.fe.comp2025.optimization;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import static pt.up.fe.comp2025.ast.Kind.TYPE;
+
+import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 import pt.up.fe.specs.util.collections.AccumulatorMap;
 import pt.up.fe.specs.util.exceptions.NotImplementedException;
@@ -50,6 +52,8 @@ public class OptUtils {
 
     public String toOllirType(JmmNode typeNode) {
 
+
+
         TYPE.checkOrThrow(typeNode);
 
         return toOllirType(types.convertType(typeNode));
@@ -67,7 +71,8 @@ public class OptUtils {
             case "void" -> "V";
             case "String" -> "String";
             case "int[]" -> "array.i32";
-            default -> throw new NotImplementedException(typeName);
+            default -> typeName;
+            //default -> throw new NotImplementedException(typeName);
         };
 
         return type;

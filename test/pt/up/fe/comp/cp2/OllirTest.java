@@ -355,4 +355,12 @@ public class OllirTest {
         CpUtils.assertEquals("Number of array reads", 6, numArrayReads, result);
     }
 
+    @Test
+    public void ObjectCreation(){
+        var result = getOllirResult("basic/NewObject.jmm");
+        System.out.println("---------------------- OLLIR ----------------------");
+        System.out.println(result.getOllirCode());
+        System.out.println("---------------------- OLLIR ----------------------");
+    }
+
 }
