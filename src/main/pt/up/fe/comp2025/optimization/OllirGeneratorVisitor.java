@@ -34,6 +34,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     private final String PUT_FIELD ="putfield";
 
 
+
     private final SymbolTable table;
 
     private final TypeUtils types;
@@ -66,6 +67,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(BRACKETS_STMT, this::visitBracketsStmt);
         addVisit(ELSE_STMT, this::visitElseStmt);
         addVisit(SIMPLE_EXPR, this::visitSimpleExpr);
+        addVisit(WHILE_STMT, this::visitWhileStmt);
 
 //        setDefaultVisit(this::defaultVisit);
     }
@@ -123,6 +125,30 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         code.append(END_STMT);
 
+        return code.toString();
+    }
+
+    private String visitWhileStmt(JmmNode node, Void unused){
+        StringBuilder code = new StringBuilder();
+
+        var while_ = ollirTypes.nextWhileBranch();
+        var if_ = ollirTypes.nextIfBranch();
+        var conditionComputation = exprVisitor.visit(node.getChild(0));
+        var endif = "endif"+if_.substring(4);
+
+        code.append(while_).append(COLON).append(conditionComputation.getComputation()).
+                append(IF).append(L_PARENTHESIS).append("!.bool ").append(conditionComputation.getRef())
+                .append(R_PARENTHESIS).append(SPACE).append(GOT_TO).append(SPACE).append(endif).append(END_STMT);
+
+        List<JmmNode> whileContent = node.getChildren(BRACKETS_STMT);
+
+        for(JmmNode child : whileContent){
+            var comp = visit(child);
+            code.append(comp);
+        }
+
+        code.append(GOT_TO).append(SPACE).append(while_).append(END_STMT);
+        code.append(endif).append(COLON);
         return code.toString();
     }
 

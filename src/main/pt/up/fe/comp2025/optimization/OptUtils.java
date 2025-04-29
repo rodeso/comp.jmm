@@ -19,12 +19,15 @@ public class OptUtils {
 
     private final AccumulatorMap<String> ifBranches;
 
+    private final AccumulatorMap<String> whileBranches;
+
     private final TypeUtils types;
 
     public OptUtils(TypeUtils types) {
         this.types = types;
         this.temporaries = new AccumulatorMap<>();
         this.ifBranches = new AccumulatorMap<>();
+        this.whileBranches = new AccumulatorMap<>();
     }
 
 
@@ -46,6 +49,15 @@ public class OptUtils {
     }
 
     public String nextIfBranch(String prefix){
+        var nextBranchNum = ifBranches.add(prefix) - 1;
+        return prefix + nextBranchNum;
+    }
+
+    public String nextWhileBranch(){
+        return nextWhileBranch("while");
+    }
+
+    public String nextWhileBranch(String prefix){
         var nextBranchNum = ifBranches.add(prefix) - 1;
         return prefix + nextBranchNum;
     }

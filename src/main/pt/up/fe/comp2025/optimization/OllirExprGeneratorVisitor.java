@@ -44,6 +44,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(BOOLEAN_LITERAL, this::visitBool);
         addVisit(UNARY_EXPR, this::visitUnaryExpr);
         addVisit(NEW,this::visitNewObject);
+        addVisit(PRIORITY_EXPR,this::visitPriorityExpr);
 
 //        setDefaultVisit(this::defaultVisit);
     }
@@ -165,6 +166,10 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
 
 
         return new OllirExprResult(reg,computation);
+    }
+
+    private OllirExprResult visitPriorityExpr(JmmNode node, Void unused){
+        return visit(node.getChild(0));
     }
 
     /**
