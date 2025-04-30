@@ -77,15 +77,11 @@ param
 stmt
     : expr '=' expr ';' #AssignStmt //
     | RETURN expr ';' #ReturnStmt //
-    | 'if' '(' expr ')' stmt elseifStmt* elseStmt? #IfStmt
+    | 'if' '(' expr ')' stmt elseStmt #IfStmt
     | 'while' '('expr')' stmt #WhileStmt
     | expr ';' #SimpleExpr
     | '{' (stmt)* '}' #BracketsStmt
     | 'for' '(' expr ')' stmt #ForStmt
-    ;
-
-elseifStmt
-    : 'else if' '('expr ')' stmt
     ;
 
 elseStmt
