@@ -9,60 +9,49 @@ import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 
-
-import java.util.List;
 import java.util.Objects;
 
-import static pt.up.fe.comp2025.ast.TypeUtils.getExprType;
-import static pt.up.fe.comp2025.ast.TypeUtils.storeType;
-
 public class ConditionCheck extends AnalysisVisitor {
-
 
     @Override
     public void buildVisitor() {
         addVisit(Kind.WHILE_STMT, this::visitWhile);
         addVisit(Kind.IF_STMT, this::visitIf);
-
     }
 
     private Void visitWhile(JmmNode whileStmt, SymbolTable symbolTable) {
         JmmNode whileCondition = whileStmt.getChild(0);
-        Type conditionType = getExprType(whileCondition);
-        if (Objects.equals(conditionType.getName(), "boolean"))
+        TypeUtils typeUtils = new TypeUtils(symbolTable);
+        JmmNode method = TypeUtils.getParentMethod(whileStmt);
+
+        Type conditionType = typeUtils.getExprTypeNotStatic(whileCondition, method);
+
+        if (conditionType == null) {
+            addReport(newError(whileCondition, "Could not determine type for while condition."));
             return null;
+        }
 
-        // Create error report
-        var message = "Expressions in While must return a boolean";
-        addReport(Report.newError(
-                Stage.SEMANTIC,
-                whileStmt.getLine(),
-                whileStmt.getColumn(),
-                message,
-                null)
-        );
-
+        if (!conditionType.getName().equals("boolean") || conditionType.isArray()) {
+            addReport(newError(whileCondition, "While condition must be a non-array boolean expression. Found type: " + conditionType.print()));
+        }
         return null;
     }
 
     private Void visitIf(JmmNode ifStmt, SymbolTable symbolTable) {
         JmmNode ifCondition = ifStmt.getChild(0);
         TypeUtils typeUtils = new TypeUtils(symbolTable);
-        Type conditionType = typeUtils.getExprTypeNotStatic(ifCondition, TypeUtils.getParentMethod(ifCondition));
-        if (Objects.equals(conditionType.getName(), "boolean"))
+        JmmNode method = TypeUtils.getParentMethod(ifStmt);
+
+        Type conditionType = typeUtils.getExprTypeNotStatic(ifCondition, method);
+
+        if (conditionType == null) {
+            addReport(newError(ifCondition, "Could not determine type for if condition."));
             return null;
+        }
 
-        // Create error report
-        var message = "Expressions in If must return a boolean";
-        addReport(Report.newError(
-                Stage.SEMANTIC,
-                ifStmt.getLine(),
-                ifStmt.getColumn(),
-                message,
-                null)
-        );
-
+        if (!conditionType.getName().equals("boolean") || conditionType.isArray()) {
+            addReport(newError(ifCondition, "If condition must be a non-array boolean expression. Found type: " + conditionType.print()));
+        }
         return null;
     }
-
 }

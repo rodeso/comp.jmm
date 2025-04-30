@@ -11,8 +11,7 @@ import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 
 import java.util.List;
-
-import static pt.up.fe.comp2025.ast.TypeUtils.getExprType;
+import java.util.ArrayList;
 
 public class FunctionCall extends AnalysisVisitor {
 
@@ -21,162 +20,113 @@ public class FunctionCall extends AnalysisVisitor {
         addVisit(Kind.CLASS_FUNCTION_EXPR, this::visitFunctionCall);
     }
 
-
     private Void visitFunctionCall(JmmNode funcCall, SymbolTable table){
         TypeUtils typeUtils = new TypeUtils(table);
 
         JmmNode object = funcCall.getChild(0);
         String funcName = funcCall.get("name");
-        if(funcName.equals("varargs")){
-            return null;
-        }
+        JmmNode methodContext = TypeUtils.getParentMethod(funcCall);
 
-        //Type objectType = getExprType(object);
+        Type callerType = typeUtils.getExprTypeNotStatic(object, methodContext);
 
-
-        JmmNode method = TypeUtils.getParentMethod(funcCall);
-
-        if(Kind.SIMPLE_EXPR.check(method) || Kind.ASSIGN_STMT.check(method))
-            method = method.getParent();
-
-        Type objectType = typeUtils.getExprTypeNotStatic(object,method);
-
-//        if(Kind.VAR_REF_EXPR.check(object)){
-//
-//            objectType = varType(object,method,table);
-//        }
-
-        List<String> imports = table.getImports();
-
-        if(imports.contains(object.get("name")))
-            return null;
-
-
-        if(imports.contains(objectType.getName()) || objectType.getName().equals("imported"))
-            return null;
-
-        boolean superClass = method.getParent().getObject("isSub", Boolean.class);
-
-        if(superClass)
-            return null;
-
-
-        List<Symbol> funcParams = table.getParameters(funcName);
-
-        if(funcParams == null){
-            var message = String.format("Call to undeclared function '%s'.", funcName);
-            addReport(Report.newError(
-                    Stage.SEMANTIC,
-                    funcCall.getLine(),
-                    funcCall.getColumn(),
-                    message,
-                    null)
-            );
-            return null;
-        }
-
-        if(funcCall.getNumChildren()==1 && funcParams.isEmpty())
-            return null;
-
-        if(funcParams.size() > funcCall.getNumChildren()-1){
-            var message = String.format("Function '%s' takes '%d' parameters '%d' provided.", funcName,funcParams.size(),funcCall.getNumChildren()-1);
-            addReport(Report.newError(
-                    Stage.SEMANTIC,
-                    funcCall.getLine(),
-                    funcCall.getColumn(),
-                    message,
-                    null)
-            );
-            return null;
-        }
-        if(funcParams.isEmpty()){
-            var message = "Too many arguments.";
-            addReport(Report.newError(
-                    Stage.SEMANTIC,
-                    funcCall.getLine(),
-                    funcCall.getColumn(),
-                    message,
-                    null)
-            );
-            return null;
-        }
-        Symbol lastParam = funcParams.getLast();
-
-        if(!lastParam.getType().getName().equals("int...")){
-            if(funcParams.size() < funcCall.getNumChildren()-1){
-                var message = "Too many arguments.";
-                addReport(Report.newError(
-                        Stage.SEMANTIC,
-                        funcCall.getLine(),
-                        funcCall.getColumn(),
-                        message,
-                        null)
-                );
+        if (callerType == null) {
+            if (object.getKind().equals("VarRefExpr") && table.getImports().contains(object.get("name"))) {
+                System.out.println("Assuming call to imported static method '" + funcName + "' is correct.");
+                return null;
+            } else {
+                addReport(newError(object, "Could not determine type of caller for method '" + funcName + "'."));
+                return null;
             }
         }
 
-        for(int i=0; i<funcParams.size();i++){
-            Type passedParamType = getExprType(funcCall.getChild(i+1));
-            if(Kind.VAR_REF_EXPR.check(funcCall.getChild(i+1)))
-                passedParamType =varType(funcCall.getChild(i+1),method,table);
+        boolean isImportedCall = table.getImports().contains(callerType.getName());
 
-            if(!funcParams.get(i).getType().equals(passedParamType)){
-                if(passedParamType.getName().equals("int") && funcParams.get(i).getType().getName().equals("int..."))
+        if (isImportedCall) {
+            System.out.println("Assuming call to imported method '" + funcName + "' on type '" + callerType.getName() + "' is correct.");
+            return null;
+        }
+
+        boolean methodExists = table.getMethods().contains(funcName);
+        boolean isSuperCall = false;
+        if (!methodExists && table.getSuper() != null && !table.getSuper().isEmpty()) {
+            System.out.println("Assuming method '" + funcName + "' exists in superclass '" + table.getSuper() + "'.");
+            isSuperCall = true;
+        } else if (!methodExists) {
+            addReport(newError(funcCall, "Method '" + funcName + "' not declared in class '" + table.getClassName() + "' or its known superclasses."));
+            return null;
+        }
+
+        if (isSuperCall) {
+            return null;
+        }
+
+        List<Symbol> expectedParams = table.getParameters(funcName);
+        if (expectedParams == null) {
+            addReport(newError(funcCall, "Internal error: Parameters not found for existing method '" + funcName + "'."));
+            return null;
+        }
+
+        List<JmmNode> passedArgs = new ArrayList<>();
+        for (int i = 1; i < funcCall.getNumChildren(); i++) {
+            passedArgs.add(funcCall.getChild(i));
+        }
+
+        boolean isVarArgs = !expectedParams.isEmpty() &&
+                expectedParams.getLast().getType().getName().endsWith("...");
+
+        if (isVarArgs) {
+            int numFixedParams = expectedParams.size() - 1;
+            if (passedArgs.size() < numFixedParams) {
+                addReport(newError(funcCall, "Method '" + funcName + "' expects at least " + numFixedParams + " arguments, but got " + passedArgs.size() + "."));
+                return null;
+            }
+
+            for (int i = 0; i < numFixedParams; i++) {
+                Type expectedType = expectedParams.get(i).getType();
+                Type passedType = typeUtils.getExprTypeNotStatic(passedArgs.get(i), methodContext);
+                if (passedType == null) {
+                    addReport(newError(passedArgs.get(i), "Could not determine type for argument " + (i+1) + "."));
                     continue;
-                var message = "At least one parameter does not match function definition.";
-                addReport(Report.newError(
-                        Stage.SEMANTIC,
-                        funcCall.getLine(),
-                        funcCall.getColumn(),
-                        message,
-                        null)
-                );
+                }
+                if (!TypeUtils.isAssignable(passedType, expectedType)) {
+                    addReport(newError(passedArgs.get(i), "Argument " + (i+1) + " type mismatch. Expected '" + expectedType.print() + "' but got '" + passedType.print() + "'."));
+                }
+            }
+
+            Type varArgsBaseType = new Type(expectedParams.getLast().getType().getName().replace("...", ""), false);
+            for (int i = numFixedParams; i < passedArgs.size(); i++) {
+                Type passedType = typeUtils.getExprTypeNotStatic(passedArgs.get(i), methodContext);
+                if (passedType == null) {
+                    addReport(newError(passedArgs.get(i), "Could not determine type for varargs argument " + (i+1) + "."));
+                    continue;
+                }
+
+                boolean passedArrayMatches = passedType.isArray() && passedType.getName().equals(varArgsBaseType.getName());
+
+                if (!TypeUtils.isAssignable(passedType, varArgsBaseType) && !passedArrayMatches) {
+                    addReport(newError(passedArgs.get(i), "Varargs argument " + (i+1) + " type mismatch. Expected assignable to '" + varArgsBaseType.print() + "' or '" + varArgsBaseType.getName() + "[]' but got '" + passedType.print() + "'."));
+                }
+            }
+
+        } else {
+            if (expectedParams.size() != passedArgs.size()) {
+                addReport(newError(funcCall, "Method '" + funcName + "' expects " + expectedParams.size() + " arguments, but got " + passedArgs.size() + "."));
+                return null;
+            }
+
+            for (int i = 0; i < expectedParams.size(); i++) {
+                Type expectedType = expectedParams.get(i).getType();
+                Type passedType = typeUtils.getExprTypeNotStatic(passedArgs.get(i), methodContext);
+                if (passedType == null) {
+                    addReport(newError(passedArgs.get(i), "Could not determine type for argument " + (i+1) + "."));
+                    continue;
+                }
+                if (!TypeUtils.isAssignable(passedType, expectedType)) {
+                    addReport(newError(passedArgs.get(i), "Argument " + (i+1) + " type mismatch. Expected '" + expectedType.print() + "' but got '" + passedType.print() + "'."));
+                }
             }
         }
-
-
-
 
         return null;
-    }
-
-
-    private Type varType(JmmNode varRefNode,JmmNode method, SymbolTable symbolTable){
-        Type type = null;
-
-        String methodName = method.get("name");
-
-        List<Symbol> varsFromMethod = symbolTable.getLocalVariables(methodName);
-        if(varsFromMethod != null){
-            for(Symbol symbol : varsFromMethod){
-                if(symbol.getName().equals(varRefNode.get("name"))){
-                    type = symbol.getType();
-                }
-            }
-        }
-
-
-        List<Symbol> fields = symbolTable.getFields();
-
-        if(fields != null){
-            for(Symbol symbol : fields){
-                if(symbol.getName().equals(varRefNode.get("name"))){
-                    type = symbol.getType();
-                }
-            }
-        }
-
-        List<Symbol> params = symbolTable.getParameters(methodName);
-
-        if(params != null){
-            for(Symbol symbol : params){
-                if(symbol.getName().equals(varRefNode.get("name"))){
-                    type = symbol.getType();
-                }
-            }
-        }
-
-
-        return type;
     }
 }

@@ -1,0 +1,39 @@
+import io;
+
+class ArrayArgsReturn {
+
+    public int[] processArray(int[] inputArr, int factor) {
+        int i;
+        int len;
+        int[] outputArr;
+
+        len = inputArr.length;
+        outputArr = new int[len];
+        i = 0;
+        while (i < len) {
+            outputArr[i] = inputArr[i] * factor;
+            i = i + 1;
+        }
+        return outputArr;
+    }
+
+    public static void main(String[] args) {
+        ArrayArgsReturn obj;
+        int[] nums;
+        int[] processedNums;
+
+        obj = new ArrayArgsReturn();
+        nums = new int[4];
+        nums[0] = 1;
+        nums[1] = 2;
+        nums[2] = 3;
+        nums[3] = 4;
+
+        processedNums = obj.processArray(nums, 3);
+
+        io.print(processedNums[1]);
+        io.print(processedNums[0]);
+        io.print(processedNums[2]);
+        io.print(processedNums[3]);
+    }
+}
