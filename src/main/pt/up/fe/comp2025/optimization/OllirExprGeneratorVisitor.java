@@ -1,9 +1,11 @@
 package pt.up.fe.comp2025.optimization;
 
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
+import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 
 import java.util.ArrayList;
@@ -22,6 +24,9 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
     private final String L_PARENTHESIS ="(";
     private final String R_PARENTHESIS =")";
     private final String GET_FIELD ="getfield";
+    private final String INVOKE ="invoke";
+    private final String STATIC ="static";
+    private final String VIRTUAL ="virtual";
 
     private final SymbolTable table;
 
@@ -45,6 +50,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(UNARY_EXPR, this::visitUnaryExpr);
         addVisit(NEW,this::visitNewObject);
         addVisit(PRIORITY_EXPR,this::visitPriorityExpr);
+        addVisit(CLASS_FUNCTION_EXPR,this::visitFuncCall);
 
 //        setDefaultVisit(this::defaultVisit);
     }
@@ -170,6 +176,66 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
 
     private OllirExprResult visitPriorityExpr(JmmNode node, Void unused){
         return visit(node.getChild(0));
+    }
+
+    private OllirExprResult visitFuncCall(JmmNode node, Void unused){
+        String funcName = node.get("name");
+        JmmNode parent = node.getParent();
+        JmmNode method = TypeUtils.getParentMethod(node);
+        JmmNode caller = node.getChild(0);
+
+        // ver se é this
+        Type type = types.getExprTypeNotStatic(caller,method);
+        String callerName = caller.get("name");
+
+        StringBuilder computation = new StringBuilder();
+        String ref = "";
+        List<String> args = new ArrayList<>();
+
+        for(int i = 1 ; i<node.getNumChildren(); i++){
+            var childComp = visit(node.getChild(1));
+            computation.append(childComp.getComputation());
+            args.add(childComp.getRef());
+        }
+
+        if(table.getImports().contains(callerName)){
+            //static method from the import
+            computation.append(INVOKE).append(STATIC).append(L_PARENTHESIS).append(caller.get("name"))
+                    .append(",").append("\""+funcName+"\"");
+
+            for(int j = 0; j< args.size(); j++){
+                if(j != args.size() -1){
+                    computation.append(",").append(SPACE);
+                }
+                computation.append(args.get(j));
+            }
+            computation.append(R_PARENTHESIS)
+                    .append(".").append("v").append(END_STMT);
+        }
+
+        // falta para se obj for de tipo importado, para extends e para quando for um tipo importado mas estiver a dar assign
+
+
+        if(VAR_REF_EXPR.check(caller)){
+
+            Type returnType = table.getReturnType(funcName);
+            var ollirType = ollirTypes.toOllirType(type);
+            var ollirReturnType = ollirTypes.toOllirType(returnType);
+            computation.append(INVOKE).append(VIRTUAL).append(L_PARENTHESIS).append(caller.get("name")+"."+ollirType)
+                    .append(",").append("\""+funcName+"\"");
+
+            for(int j = 0; j< args.size(); j++){
+                if(j != args.size() -1){
+                    computation.append(",").append(SPACE);
+                }
+                computation.append(args.get(j));
+            }
+            computation.append(R_PARENTHESIS)
+                    .append(".").append(ollirReturnType).append(END_STMT);
+        }
+
+
+        return new OllirExprResult(ref,computation);
     }
 
     /**
