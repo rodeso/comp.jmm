@@ -2,7 +2,6 @@ package pt.up.fe.comp2025.optimization;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
@@ -12,7 +11,6 @@ import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 
 import static pt.up.fe.comp2025.ast.Kind.*;
-import static pt.up.fe.comp2025.ast.TypeUtils.getExprType;
 
 /**
  * Generates OLLIR code from JmmNodes that are not expressions.
@@ -25,36 +23,33 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     private final String NL = "\n";
     private final String L_BRACKET = " {\n";
     private final String R_BRACKET = "}\n";
-    private final String IMPORT ="import";
-    private final String EXTENDS ="extends";
-    private final String IF ="if";
-    private final String L_PARENTHESIS ="(";
-    private final String R_PARENTHESIS =")";
-    private final String GOT_TO ="goto";
-    private final String COLON =":\n";
-    private final String PUT_FIELD ="putfield";
-
-
+    private final String IMPORT = "import";
+    private final String EXTENDS = "extends";
+    private final String IF = "if";
+    private final String L_PARENTHESIS = "(";
+    private final String R_PARENTHESIS = ")";
+    private final String GOT_TO = "goto";
+    private final String COLON = ":\n";
+    private final String PUT_FIELD = "putfield";
+    private final String THIS = "this";
+    private final String RETURN = "ret";
 
     private final SymbolTable table;
-
     private final TypeUtils types;
     private final OptUtils ollirTypes;
-
-
     private final OllirExprGeneratorVisitor exprVisitor;
 
     public OllirGeneratorVisitor(SymbolTable table) {
         this.table = table;
         this.types = new TypeUtils(table);
         this.ollirTypes = new OptUtils(types);
-        exprVisitor = new OllirExprGeneratorVisitor(table);
+        // Pass the *same* SymbolTable to the expression visitor
+        this.exprVisitor = new OllirExprGeneratorVisitor(table);
+        buildVisitor(); // Call buildVisitor in the constructor
     }
-
 
     @Override
     protected void buildVisitor() {
-
         addVisit(PROGRAM, this::visitProgram);
         addVisit(CLASS_DECL, this::visitClass);
         addVisit(METHOD_DECL, this::visitMethodDecl);
@@ -66,370 +61,419 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(VAR_DECL, this::visitVarDecl);
         addVisit(IF_STMT, this::visitIfStmt);
         addVisit(BRACKETS_STMT, this::visitBracketsStmt);
-        addVisit(ELSE_STMT, this::visitElseStmt);
+        // ELSE_STMT and ELSEIF_STMT are handled within visitIfStmt logic usually
         addVisit(SIMPLE_EXPR, this::visitSimpleExpr);
         addVisit(WHILE_STMT, this::visitWhileStmt);
-//        setDefaultVisit(this::defaultVisit);
+
+        setDefaultVisit(this::defaultVisit);
     }
 
-
-    private String visitVarDecl(JmmNode node, Void unused){
+    private String visitVarDecl(JmmNode node, Void unused) {
         JmmNode parent = node.getParent();
         StringBuilder code = new StringBuilder();
-        if(CLASS_DECL.check(parent)){
-            code.append(".field public");
+        // Only generate .field for class-level declarations
+        if (CLASS_DECL.check(parent)) {
+            code.append(".field public "); // Assuming public fields for simplicity
+            // Note: Access modifiers (private, protected) might need specific handling
+            // based on language spec if they differ from Java.
+
+            // Type conversion needs the Type node (child 0)
+            Type type = TypeUtils.convertType(node.getChild(0));
+            String ollirType = ollirTypes.toOllirType(type);
+            code.append(node.get("name")).append(ollirType).append(END_STMT);
         }
-        Type type = types.getExprTypeNotStatic(node,parent);
-        String ollirType = ollirTypes.toOllirType(type);
-
-        code.append(SPACE).append(node.get("name")).append(ollirType).append(END_STMT);
-
+        // Local variable declarations don't generate direct OLLIR code here,
+        // they are implicitly handled by usage and the symbol table.
         return code.toString();
-
     }
-
 
     private String visitAssignStmt(JmmNode node, Void unused) {
+        JmmNode lhsNode = node.getChild(0);
+        JmmNode rhsNode = node.getChild(1);
+        JmmNode methodNode = TypeUtils.getParentMethod(node);
 
-        var rhs = exprVisitor.visit(node.getChild(1));
-
+        var rhsResult = exprVisitor.visit(rhsNode);
         StringBuilder code = new StringBuilder();
+        code.append(rhsResult.getComputation()); // Computation for the right side
 
-        // code to compute the children
-        code.append(rhs.getComputation());
+        // Determine LHS type and reference string
+        Type lhsType = types.getExprTypeNotStatic(lhsNode, methodNode);
+        String ollirLhsType = ollirTypes.toOllirType(lhsType);
+        String lhsRef;
 
-        // code to compute self
-        // statement has type of lhs
-        var left = node.getChild(0);
+        // Handle Array Assignment: a[i] = ...
+        if (lhsNode.isInstance(ARRAY_ACCESS)) {
+            JmmNode arrayVarNode = lhsNode.getChild(0);
+            JmmNode indexNode = lhsNode.getChild(1);
 
+            // Evaluate array and index - needed for the assignment target
+            var arrayResult = exprVisitor.visit(arrayVarNode);
+            var indexResult = exprVisitor.visit(indexNode);
+            code.append(arrayResult.getComputation());
+            code.append(indexResult.getComputation());
 
+            // Build the LHS reference string for array access
+            lhsRef =
+                    arrayResult.getRef() +
+                            "[" +
+                            indexResult.getRef() +
+                            "]" +
+                            ollirLhsType; // Type of the element being assigned
 
+            // Assignment instruction
+            code
+                    .append(lhsRef)
+                    .append(SPACE)
+                    .append(ASSIGN)
+                    .append(ollirLhsType)
+                    .append(SPACE)
+                    .append(rhsResult.getRef())
+                    .append(END_STMT);
 
-        JmmNode method = TypeUtils.getParentMethod(node);
-        Type thisType = types.getExprTypeNotStatic(left,method);
-        String typeString = ollirTypes.toOllirType(thisType);
-
-        String varCode;
-
-        if (Kind.check(left, Kind.ARRAY_ACCESS)) {
-            left = left.getChild(0);
-            var index = node.getChild(1);
-            Type indexType = types.getExprTypeNotStatic(index,method);
-            String indexString = ollirTypes.toOllirType(indexType);
-            varCode = left.get("name")+"[" +index.get("value") +indexString+ "]" +typeString;
         }
+        // Handle Field Assignment: this.a = ... or obj.a = ... (if supported)
+        else if (types.isField(lhsNode)) {
+            // Assuming assignment to 'this.field'
+            String fieldName = lhsNode.get("name");
+            code
+                    .append(PUT_FIELD)
+                    .append(L_PARENTHESIS)
+                    .append(THIS)
+                    .append(".")
+                    .append(table.getClassName()) // Type of 'this'
+                    .append(", ")
+                    .append(fieldName)
+                    .append(ollirLhsType) // Field name and type
+                    .append(", ")
+                    .append(rhsResult.getRef()) // Value to assign
+                    .append(R_PARENTHESIS)
+                    .append(".V") // putfield returns void
+                    .append(END_STMT);
+        }
+        // Handle Local Variable/Parameter Assignment: x = ...
         else {
-            varCode = left.get("name") + typeString;
+            lhsRef = lhsNode.get("name") + ollirLhsType; // Simple variable name + type
+            code
+                    .append(lhsRef)
+                    .append(SPACE)
+                    .append(ASSIGN)
+                    .append(ollirLhsType)
+                    .append(SPACE)
+                    .append(rhsResult.getRef())
+                    .append(END_STMT);
         }
-
-
-        if(types.isField(left)){
-            code.append(PUT_FIELD).append(L_PARENTHESIS).append("this,").append(varCode)
-                    .append(",").append(rhs.getRef()).append(R_PARENTHESIS).append(".V").append(END_STMT);
-            return code.toString();
-        }
-
-
-        code.append(varCode);
-        code.append(SPACE);
-
-        code.append(ASSIGN);
-        code.append(typeString);
-        code.append(SPACE);
-
-        code.append(rhs.getRef());
-
-        code.append(END_STMT);
 
         return code.toString();
     }
 
-    private String visitWhileStmt(JmmNode node, Void unused){
+    private String visitWhileStmt(JmmNode node, Void unused) {
         StringBuilder code = new StringBuilder();
+        String loopLabel = ollirTypes.nextWhileBranch("Loop");
+        String condLabel = ollirTypes.nextWhileBranch("Cond");
+        String endLabel = ollirTypes.nextWhileBranch("EndLoop");
 
-        var while_ = ollirTypes.nextWhileBranch();
-        var if_ = ollirTypes.nextIfBranch();
-        var conditionComputation = exprVisitor.visit(node.getChild(0));
-        var endif = "endif"+if_.substring(4);
+        code.append(GOT_TO).append(SPACE).append(condLabel).append(END_STMT); // Jump to condition check first
 
-        code.append(while_).append(COLON).append(conditionComputation.getComputation()).
-                append(IF).append(L_PARENTHESIS).append("!.bool ").append(conditionComputation.getRef())
-                .append(R_PARENTHESIS).append(SPACE).append(GOT_TO).append(SPACE).append(endif).append(END_STMT);
+        code.append(loopLabel).append(COLON); // Label for loop body
+        // Visit the loop body statement (assuming it's the second child)
+        code.append(visit(node.getChild(1)));
 
-        List<JmmNode> whileContent = node.getChildren(BRACKETS_STMT);
+        code.append(condLabel).append(COLON); // Label for condition check
+        // Visit the condition expression (first child)
+        var conditionResult = exprVisitor.visit(node.getChild(0));
+        code.append(conditionResult.getComputation());
+        // If condition is true, jump back to loop body
+        code
+                .append(IF)
+                .append(L_PARENTHESIS)
+                .append(conditionResult.getRef())
+                .append(R_PARENTHESIS)
+                .append(SPACE)
+                .append(GOT_TO)
+                .append(SPACE)
+                .append(loopLabel)
+                .append(END_STMT);
+        // If condition is false, fall through to endLabel (or add explicit goto EndLoop;)
 
-        for(JmmNode child : whileContent){
-            var comp = visit(child);
-            code.append(comp);
-        }
-
-        code.append(GOT_TO).append(SPACE).append(while_).append(END_STMT);
-        code.append(endif).append(COLON);
+        code.append(endLabel).append(COLON); // Label after the loop
         return code.toString();
     }
 
-    private String visitIfStmt(JmmNode node, Void unused){
+    private String visitIfStmt(JmmNode node, Void unused) {
         StringBuilder code = new StringBuilder();
+        JmmNode conditionNode = node.getChild(0);
+        JmmNode thenNode = node.getChild(1);
+        // Check if there's an else part
+        JmmNode elseNode = node.getNumChildren() > 2 ? node.getChild(2) : null;
 
-        var condition = exprVisitor.visit(node.getChild(0));
+        String thenLabel = ollirTypes.nextIfBranch("if_then");
+        String endLabel = ollirTypes.nextIfBranch("if_end");
+        String elseLabel = elseNode != null ? ollirTypes.nextIfBranch("if_else") : endLabel;
 
-        code.append(condition.getComputation());
+        // Evaluate condition
+        var conditionResult = exprVisitor.visit(conditionNode);
+        code.append(conditionResult.getComputation());
 
-        var then = ollirTypes.nextIfBranch();
+        // if (condition) goto thenLabel;
+        code
+                .append(IF)
+                .append(L_PARENTHESIS)
+                .append(conditionResult.getRef())
+                .append(R_PARENTHESIS)
+                .append(SPACE)
+                .append(GOT_TO)
+                .append(SPACE)
+                .append(thenLabel)
+                .append(END_STMT);
 
-        code.append(IF).append(SPACE).append(L_PARENTHESIS).append(condition.getRef()).append(R_PARENTHESIS)
-                .append(SPACE).append(GOT_TO).append(SPACE).append(then).append(END_STMT);
-
-        List<JmmNode> elseIfStmt = node.getChildren(ELSEIF_STMT);
-        List<JmmNode> elseStmt = node.getChildren(ELSE_STMT);
-        List<JmmNode> ifContent = node.getChildren(BRACKETS_STMT);
-
-        for(JmmNode els : elseStmt){
-            code.append(visit(els));
+        // Code for the 'else' block (if it exists) or jump to end
+        if (elseNode != null) {
+            code.append(visit(elseNode)); // Generate else block code
+            code.append(GOT_TO).append(SPACE).append(endLabel).append(END_STMT); // Jump past 'then' block
+        } else {
+            // No else block, fall through or jump directly to end if needed
+            // code.append(GOTO + SPACE + endLabel + END_STMT); // Usually not needed if then block is next
         }
-        String enfIfNum = "endif"+then.substring(4);
-        code.append(GOT_TO).append(SPACE).append(enfIfNum).append(END_STMT);
 
-        code.append(then).append(COLON);
+        // Code for the 'then' block
+        code.append(thenLabel).append(COLON);
+        code.append(visit(thenNode));
+        // Fall through to endLabel after 'then' block
 
-        for(JmmNode ifExpr : ifContent){
-            code.append(visit(ifExpr));
-        }
-
-        code.append(enfIfNum).append(COLON);
-
+        code.append(endLabel).append(COLON); // Final label
 
         return code.toString();
     }
 
-    private String visitElseStmt(JmmNode node, Void unused){
-        StringBuilder code = new StringBuilder();
+    // visitElseStmt is usually not needed as its content is generated within visitIfStmt
+    // private String visitElseStmt(JmmNode node, Void unused){ ... }
 
-        for(JmmNode child : node.getChildren()){
+    private String visitBracketsStmt(JmmNode node, Void unused) {
+        StringBuilder code = new StringBuilder();
+        // Visit all statements within the brackets
+        for (JmmNode child : node.getChildren()) {
             code.append(visit(child));
         }
-
         return code.toString();
     }
 
-    private String visitBracketsStmt(JmmNode node, Void unused){
-        StringBuilder code = new StringBuilder();
-
-        for(JmmNode child : node.getChildren()){
-            code.append(visit(child));
-        }
-
-        return code.toString();
-    }
-
-    private String visitSimpleExpr(JmmNode node, Void unused){
+    private String visitSimpleExpr(JmmNode node, Void unused) {
+        // Visit the expression, its computation contains the necessary OLLIR code
         var code = exprVisitor.visit(node.getChild(0));
-
         return code.getComputation();
     }
 
-
     private String visitReturn(JmmNode node, Void unused) {
-
-        JmmNode retExpr = node.getChild(0);
-
-        Type retType = types.getExprTypeNotStatic(retExpr,TypeUtils.getParentMethod(node));
-
-
         StringBuilder code = new StringBuilder();
+        String methodSig = TypeUtils.getParentMethod(node).get("name");
+        Type retType = table.getReturnType(methodSig);
+        String ollirRetType = ollirTypes.toOllirType(retType);
 
-
-
-
-
-
-        var expr = node.getNumChildren() > 0 ? exprVisitor.visit(node.getChild(0)) : OllirExprResult.EMPTY;
-
-
-
-
-        code.append(expr.getComputation());
-        code.append("ret");
-        code.append(ollirTypes.toOllirType(retType));
-        code.append(SPACE);
-
-        code.append(expr.getRef());
-
-        code.append(END_STMT);
-
+        // Handle void return
+        if (ollirRetType.equals(".V")) {
+            code.append(RETURN).append(ollirRetType).append(END_STMT);
+        } else {
+            // Handle return with value
+            JmmNode retExprNode = node.getChild(0);
+            var exprResult = exprVisitor.visit(retExprNode);
+            code.append(exprResult.getComputation()); // Compute the return value
+            code
+                    .append(RETURN)
+                    .append(ollirRetType)
+                    .append(SPACE)
+                    .append(exprResult.getRef()) // Reference to the return value
+                    .append(END_STMT);
+        }
         return code.toString();
     }
-
-
 
     private String visitParam(JmmNode node, Void unused) {
-
-        var typeCode = ollirTypes.toOllirType(node.getChild(0));
+        // Child 0 is Type node
+        var typeCode = ollirTypes.toOllirType(TypeUtils.convertType(node.getChild(0)));
         var id = node.get("name");
-
-        String code = id + typeCode;
-
-        return code;
+        return id + typeCode;
     }
 
-    private String visitParamList(JmmNode node, Void unused){
-        StringBuilder code = new StringBuilder();
-
-        String methodName = node.getParent().get("name");
-
-        for(int i = 0; i < table.getParameters(methodName).size();i++){
-            var param = visit(node.getChild(i));
-            code.append(param);
-            if(i != table.getParameters(methodName).size()-1){
-                code.append(",");
-            }
-
-
-        }
-
-        return code.toString();
+    private String visitParamList(JmmNode node, Void unused) {
+        return node
+                .getChildren()
+                .stream()
+                .map(paramNode -> visit(paramNode, null)) // Pass null for Void context
+                .collect(Collectors.joining(", "));
     }
-
 
     private String visitMethodDecl(JmmNode node, Void unused) {
-
         StringBuilder code = new StringBuilder(".method ");
-
         boolean isPublic = node.getBoolean("isPublic", false);
+        var name = node.get("name");
+        boolean isStatic = name.equals("main"); // Simple check for main, needs refinement for others
+        // TODO: Check for 'static' keyword in method declaration if grammar supports it
 
         if (isPublic) {
             code.append("public ");
         }
-
-        // name
-        var name = node.get("name");
-
-        if(name.equals("main")){
+        if (isStatic) {
             code.append("static ");
         }
+
+        if (node.hasAttribute("varargs") && node.getObject("varargs", Boolean.class)) {
+            code.append("varargs ");
+        }
+
+
         code.append(name);
 
-        // params
-
+        // Parameters
         code.append("(");
-        if(!table.getParameters(name).isEmpty()){
-            code.append(visit(node.getChild(1)));
+        String paramsString = "";
+        if (name.equals("main")) {
+            // Main method has specific signature
+            paramsString = "args.array.String";
+        } else {
+            // Find ParamList node
+            node
+                    .getChildren(PARAM_LIST)
+                    .stream()
+                    .findFirst()
+                    .ifPresent(paramList -> code.append(visit(paramList)));
         }
-        if(name.equals("main")){
-            code.append("args.array.String");
-        }
+        code.append(paramsString);
         code.append(")");
 
-
-        // type
-
+        // Return Type
         var retType = ollirTypes.toOllirType(table.getReturnType(name));
         code.append(retType);
         code.append(L_BRACKET);
 
-
-        // rest of its children stmts
-        var stmtsCode = node.getChildren(STMT).stream()
+        // Body (VarDeclarations are handled by usage, process Statements)
+        var locals = table.getLocalVariables(name); // Needed for stack allocation later?
+        var stmtsCode = node
+                .getChildren()
+                .stream()
+                // Filter out VarDecl, ParamList, Type nodes, process only statements
+                .filter(child ->
+                        !Kind.VAR_DECL.check(child) &&
+                                !Kind.PARAM_LIST.check(child) &&
+                                !Kind.TYPE.check(child)
+                )
                 .map(this::visit)
-                .collect(Collectors.joining("\n   ", "   ", ""));
+                .collect(Collectors.joining()); // Collect statements sequentially
 
         code.append(stmtsCode);
+
+        // Ensure return for void methods if not explicitly present
+        if (retType.equals(".V") && !stmtsCode.contains(RETURN + ".V")) {
+            if (!stmtsCode.endsWith(END_STMT) && !stmtsCode.isEmpty()) {
+                code.append(NL); // Add newline if last statement didn't have one
+            }
+            code.append(RETURN).append(".V").append(END_STMT);
+        }
+
+
         code.append(R_BRACKET);
         code.append(NL);
 
         return code.toString();
     }
 
-    private String visitImportDecl(JmmNode node, Void unused){
+    private String visitImportDecl(JmmNode node, Void unused) {
         StringBuilder code = new StringBuilder();
-        var path = node.getOptional("path").orElse("");
-        path=path.substring(1,path.length()-1);
-        StringBuilder realPath = new StringBuilder();
-        realPath.append(IMPORT).append(SPACE);
+        code.append(IMPORT).append(SPACE);
 
-        if(!path.isEmpty()){
+        // Try to get the path attribute as a String (might be like "[comp, io]")
+        String pathString = node.getOptional("path").orElse("");
 
-            path = path.replaceAll("\\s+","");
-            String[] dir = path.trim().split(",");
-
-            for(String d : dir){
-                realPath.append(d).append(".");
+        // Clean the path string (remove brackets and spaces) and join with dots
+        if (!pathString.isEmpty()) {
+            String cleanedPath = pathString.replace("[", "").replace("]", "").replace(" ", "");
+            if (!cleanedPath.isEmpty()) {
+                String[] pathParts = cleanedPath.split(",");
+                code.append(String.join(".", pathParts)).append(".");
             }
-
-
         }
-        var file = node.get("name");
-        code.append(realPath).append(file).append(END_STMT);
+
+        // Append the final class name
+        code.append(node.get("name")).append(END_STMT);
         return code.toString();
-
     }
-    private String visitClass(JmmNode node, Void unused) {
 
+
+    private String visitClass(JmmNode node, Void unused) {
         StringBuilder code = new StringBuilder();
 
-        code.append(NL);
+        // Imports first
+        // Imports are handled at the Program level usually
+
         code.append(table.getClassName());
-        boolean isSub = node.getBoolean("isSub",false);
-        if(isSub){
+        boolean isSub = node.getBoolean("isSub", false);
+        if (isSub) {
             String superClass = node.get("parent");
             code.append(SPACE).append(EXTENDS).append(SPACE).append(superClass);
         }
         code.append(L_BRACKET);
         code.append(NL);
+
+        // Fields
+        for (var child : node.getChildren(VAR_DECL)) {
+            code.append(visit(child));
+        }
         code.append(NL);
 
-        for (var child : node.getChildren(VAR_DECL)) {
-            var result = visit(child);
-            code.append(result);
-        }
-
+        // Constructor
         code.append(buildConstructor());
         code.append(NL);
 
+        // Methods
         for (var child : node.getChildren(METHOD_DECL)) {
-            var result = visit(child);
-            code.append(result);
+            code.append(visit(child));
         }
 
         code.append(R_BRACKET);
-
         return code.toString();
     }
 
     private String buildConstructor() {
-
-        return """
-                .construct %s().V {
-                    invokespecial(this, "<init>").V;
-                }
-                """.formatted(table.getClassName());
+        // Basic constructor, assumes no fields needing initialization here
+        // If fields have initializers, they might need to be added.
+        return (
+                ".construct " +
+                        table.getClassName() +
+                        "().V" +
+                        L_BRACKET +
+                        "invokespecial(" +
+                        THIS +
+                        ", \"<init>\").V" +
+                        END_STMT +
+                        R_BRACKET +
+                        NL
+        );
     }
 
-
     private String visitProgram(JmmNode node, Void unused) {
-
         StringBuilder code = new StringBuilder();
-
-        node.getChildren().stream()
+        // Process Imports first
+        node
+                .getChildren(IMPORT_DECL)
+                .stream()
                 .map(this::visit)
                 .forEach(code::append);
-
+        // Process Class Declaration
+        node
+                .getChildren(CLASS_DECL)
+                .stream()
+                .map(this::visit)
+                .forEach(code::append);
         return code.toString();
     }
 
     /**
-     * Default visitor. Visits every child node and return an empty string.
-     *
-     * @param node
-     * @param unused
-     * @return
+     * Default visitor. Visits every child node and returns an empty string.
      */
     private String defaultVisit(JmmNode node, Void unused) {
-
+        StringBuilder code = new StringBuilder();
         for (var child : node.getChildren()) {
-            visit(child);
+            code.append(visit(child, unused)); // Pass unused context
         }
-
-        return "";
+        return code.toString(); // Return collected code from children
     }
 }
