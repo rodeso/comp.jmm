@@ -1,6 +1,5 @@
 package pt.up.fe.comp2025.analysis.passes;
 
-import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
@@ -8,13 +7,12 @@ import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
-import pt.up.fe.comp2025.ast.TypeUtils;
-
+import pt.up.fe.comp2025.ast.TypeUtils; // Import normal
 
 import java.util.List;
 import java.util.Objects;
 
-import static pt.up.fe.comp2025.ast.TypeUtils.getExprType;
+// REMOVIDA importação estática
 
 public class ArithmeticOperation extends AnalysisVisitor {
 
@@ -25,124 +23,99 @@ public class ArithmeticOperation extends AnalysisVisitor {
     }
 
     private Void visitBinaryExpr(JmmNode binaryExpr, SymbolTable table) {
-        TypeUtils typeUtils = new TypeUtils(table);
+        TypeUtils typeUtils = new TypeUtils(table); // Instanciar
         JmmNode expr1 = binaryExpr.getChild(0);
         JmmNode expr2 = binaryExpr.getChild(1);
+        JmmNode method = TypeUtils.getParentMethod(binaryExpr); // Obter contexto
 
-        Type opType = getExprType(binaryExpr);
         var op = binaryExpr.get("op");
-        binaryExpr.putObject("type", opType);
 
-        JmmNode expr1Parent = TypeUtils.getParentMethod(expr1);
-        JmmNode expr2Parent = TypeUtils.getParentMethod(expr2);
-        Type typeExpr1 = typeUtils.getExprTypeNotStatic(expr1,expr1Parent);
-        Type typeExpr2 = typeUtils.getExprTypeNotStatic(expr2,expr2Parent);
+        // Usar método não estático
+        Type typeExpr1 = typeUtils.getExprTypeNotStatic(expr1, method);
+        Type typeExpr2 = typeUtils.getExprTypeNotStatic(expr2, method);
 
-//        if(Kind.VAR_REF_EXPR.check(expr1)){
-//            typeExpr1 = varType(expr1, table);
-//        }
-//
-//        if(Kind.VAR_REF_EXPR.check(expr2)){
-//            typeExpr2 = varType(expr2, table);
-//        }
-        if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/")) {
+        Type expectedOperandType;
+        Type resultType;
+        boolean isArithmetic = op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/");
+        boolean isComparison = op.equals("<"); // Adicionar ==, != etc. se necessário
+        boolean isLogical = op.equals("&&"); // Adicionar || se necessário
 
-            assert typeExpr1 != null;
-            if (!typeExpr1.equals(typeExpr2) && !typeExpr1.getName().equals("boolean")) {
-                String message = String.format("Operator '%s' not applicable to type '%s'", op, typeExpr1);
-                addReport(Report.newError(
-                        Stage.SEMANTIC,
-                        binaryExpr.getLine(),
-                        binaryExpr.getColumn(),
-                        message,
-                        null)
-                );
+        if (isArithmetic) {
+            expectedOperandType = TypeUtils.newIntType();
+            resultType = TypeUtils.newIntType();
+        } else if (isComparison) {
+            expectedOperandType = TypeUtils.newIntType();
+            resultType = TypeUtils.newBooleanType();
+        } else if (isLogical) {
+            expectedOperandType = TypeUtils.newBooleanType();
+            resultType = TypeUtils.newBooleanType();
+        } else {
+            addReport(newError(binaryExpr, "Unsupported binary operator '" + op + "'."));
+            return null;
+        }
+
+        // Verificar tipo do operando esquerdo
+        if (typeExpr1 == null) {
+            addReport(newError(expr1, "Could not determine type for left operand."));
+        } else if (typeExpr1.isArray() || !typeExpr1.getName().equals(expectedOperandType.getName())) {
+            // Permitir tipos importados? Pode ser perigoso sem mais verificações.
+            // Ignorar verificação para tipos importados por agora.
+            boolean isImported = typeExpr1.hasAttribute("imported") && typeExpr1.getObject("imported", Boolean.class);
+            if (!isImported) {
+                addReport(newError(expr1, "Operator '" + op + "' cannot be applied to type '" + typeExpr1.print() + "'. Expected '" + expectedOperandType.getName() + "'."));
             }
         }
-        if (!typeExpr1.equals(opType) && !(Objects.equals(op, "<") && typeExpr1.getName().equals("int")) &&
-                !typeExpr1.getName().equals("imported")) {
-            String message = String.format("Operator '%s' not applicable to type '%s'", op, typeExpr1);
-            addReport(Report.newError(
-                    Stage.SEMANTIC,
-                    binaryExpr.getLine(),
-                    binaryExpr.getColumn(),
-                    message,
-                    null)
-            );
-        }
-        if (!typeExpr2.equals(opType) && !(Objects.equals(op, "<") && typeExpr2.getName().equals("int")) &&
-                !typeExpr2.getName().equals("imported")) {
-            String message = String.format("Operator '%s' not applicable to type '%s'", op, typeExpr2);
-            addReport(Report.newError(
-                    Stage.SEMANTIC,
-                    binaryExpr.getLine(),
-                    binaryExpr.getColumn(),
-                    message,
-                    null)
-            );
+
+        // Verificar tipo do operando direito
+        if (typeExpr2 == null) {
+            addReport(newError(expr2, "Could not determine type for right operand."));
+        } else if (typeExpr2.isArray() || !typeExpr2.getName().equals(expectedOperandType.getName())) {
+            boolean isImported = typeExpr2.hasAttribute("imported") && typeExpr2.getObject("imported", Boolean.class);
+            if (!isImported) {
+                addReport(newError(expr2, "Operator '" + op + "' cannot be applied to type '" + typeExpr2.print() + "'. Expected '" + expectedOperandType.getName() + "'."));
+            }
         }
 
+        // Anotar o nó com o tipo de resultado (se os operandos foram minimamente válidos)
+        if (typeExpr1 != null && typeExpr2 != null) {
+            binaryExpr.putObject("type", resultType);
+        }
 
         return null;
     }
 
     private Void visitUnaryExpr(JmmNode unaryExpr, SymbolTable table) {
+        TypeUtils typeUtils = new TypeUtils(table); // Instanciar
         JmmNode expr = unaryExpr.getChild(0);
+        JmmNode method = TypeUtils.getParentMethod(unaryExpr); // Obter contexto
+        String op = unaryExpr.get("op");
 
-        Type opType = getExprType(unaryExpr);
-        Type typeExpr = getExprType(expr);
+        // Usar método não estático
+        Type typeExpr = typeUtils.getExprTypeNotStatic(expr, method);
 
-        if(Kind.VAR_REF_EXPR.check(expr)){
-            typeExpr = varType(expr, table);
+        Type expectedOperandType;
+        Type resultType;
+
+        if (op.equals("!")) {
+            expectedOperandType = TypeUtils.newBooleanType();
+            resultType = TypeUtils.newBooleanType();
+        } else {
+            addReport(newError(unaryExpr, "Unsupported unary operator '" + op + "'."));
+            return null;
         }
 
-        unaryExpr.putObject("type", opType);
+        if (typeExpr == null) {
+            addReport(newError(expr, "Could not determine type for operand."));
+        } else if (typeExpr.isArray() || !typeExpr.getName().equals(expectedOperandType.getName())) {
+            addReport(newError(expr, "Operator '" + op + "' cannot be applied to type '" + typeExpr.print() + "'. Expected '" + expectedOperandType.getName() + "'."));
+        }
 
-        if (!typeExpr.equals(opType)) {
-            String message = String.format("Operator '%s' not applicable to type '%s'", unaryExpr.get("op"), typeExpr);
-            addReport(Report.newError(
-                    Stage.SEMANTIC,
-                    expr.getLine(),
-                    expr.getColumn(),
-                    message,
-                    null)
-            );
+        // Anotar o nó com o tipo de resultado (se o operando foi minimamente válido)
+        if (typeExpr != null) {
+            unaryExpr.putObject("type", resultType);
         }
 
         return null;
     }
 
-    private Type varType(JmmNode varRefNode, SymbolTable symbolTable){
-        Type type = null;
-        JmmNode method = varRefNode.getParent().getParent();
-        String methodName = method.get("name");
-
-        List<Symbol> varsFromMethod = symbolTable.getLocalVariables(methodName);
-
-        for(Symbol symbol : varsFromMethod){
-            if(symbol.getName().equals(varRefNode.get("name"))){
-                type = symbol.getType();
-            }
-        }
-
-        List<Symbol> fields = symbolTable.getFields();
-
-        for(Symbol symbol : fields){
-            if(symbol.getName().equals(varRefNode.get("name"))){
-                type = symbol.getType();
-            }
-        }
-
-        List<Symbol> params = symbolTable.getParameters(methodName);
-
-        if(params != null){
-            for(Symbol symbol : params){
-                if(symbol.getName().equals(varRefNode.get("name"))){
-                    type = symbol.getType();
-                }
-            }
-        }
-
-        return type;
-    }
 }
