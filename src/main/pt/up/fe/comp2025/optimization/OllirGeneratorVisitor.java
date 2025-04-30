@@ -78,7 +78,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         return code.toString();
     }
 
-    // SUBSTITUÍDO visitAssignStmt
     private String visitAssignStmt(JmmNode node, Void unused) {
         JmmNode lhsNode = node.getChild(0);
         JmmNode rhsNode = node.getChild(1);
@@ -86,17 +85,14 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         StringBuilder code = new StringBuilder();
 
-        // Determinar tipo e referência do LHS (lado esquerdo)
         Type lhsType = types.getExprTypeNotStatic(lhsNode, methodNode);
         if (lhsType == null) {
             System.err.println("Error: Could not determine type for LHS of assignment: " + lhsNode);
-            // Adicionar report de erro se possível
             return "// ERROR: Could not determine type for LHS\n";
         }
         String ollirLhsType = ollirTypes.toOllirType(lhsType);
         String lhsRef;
 
-        // Determinar a referência LHS (se é var, field, ou array access)
         if (lhsNode.isInstance(Kind.ARRAY_ACCESS)) {
             // Atribuição a array - será tratada depois de avaliar RHS
             // Precisamos da referência completa a[i].type
@@ -104,18 +100,16 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             JmmNode indexNode = lhsNode.getChild(1);
             var arrayResult = exprVisitor.visit(arrayVarNode);
             var indexResult = exprVisitor.visit(indexNode);
-            // A computação do array/index é adicionada ANTES da computação do RHS
             code.append(arrayResult.getComputation());
             code.append(indexResult.getComputation());
             Type elementType = new Type(lhsType.getName(), false);
             String ollirElementType = ollirTypes.toOllirType(elementType);
             lhsRef = arrayResult.getRef() + "[" + indexResult.getRef() + "]" + ollirElementType;
-            ollirLhsType = ollirElementType; // Tipo da atribuição é o do elemento
+            ollirLhsType = ollirElementType;
 
         } else if (types.isField(lhsNode)) {
-            // Atribuição a field - será tratada com PUTFIELD
             var rhsResult = exprVisitor.visit(rhsNode);
-            code.append(rhsResult.getComputation()); // Computação do RHS primeiro
+            code.append(rhsResult.getComputation());
             String fieldName = lhsNode.get("name");
             code.append(PUT_FIELD).append(L_PARENTHESIS)
                     .append(THIS).append(".").append(table.getClassName())
@@ -125,14 +119,11 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             return code.toString(); // Termina aqui para PUTFIELD
 
         } else {
-            // Variável local ou parâmetro
             lhsRef = lhsNode.get("name") + ollirLhsType;
         }
 
 
-        // --- Tratamento do RHS (lado direito) ---
 
-        // Caso especial: RHS é NEW
         if (rhsNode.isInstance(Kind.NEW)) {
             String className = rhsNode.get("name");
             String ollirClassType = ollirTypes.toOllirType(new Type(className, false));
@@ -147,7 +138,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                     .append(END_STMT);
 
         } else if (rhsNode.isInstance(Kind.ARRAY_CREATION)) {
-            // Caso especial: RHS é criação de array
             var rhsResult = exprVisitor.visit(rhsNode);
             code.append(rhsResult.getComputation()); // Contém o tmpN.array := new(...)
 
@@ -208,7 +198,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         String elseLabel = ollirTypes.nextIfBranch("if_else");
         String endLabel = ollirTypes.nextIfBranch("if_end");
-        String finalElseLabel = elseNode != null ? elseLabel : endLabel; // Jump target if condition is false
+        String finalElseLabel = elseNode != null ? elseLabel : endLabel;
 
         // Avaliar condição
         var conditionResult = exprVisitor.visit(conditionNode);
@@ -221,7 +211,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         code.append(IF).append(L_PARENTHESIS).append(negatedCondTemp).append(R_PARENTHESIS)
                 .append(SPACE).append(GOT_TO).append(SPACE).append(finalElseLabel).append(END_STMT);
 
-        // Bloco Then (executa se condição original era verdadeira)
         code.append(visit(thenNode));
         // Se havia um bloco else, saltar por cima dele para o end
         if (elseNode != null) {
@@ -340,7 +329,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         code.append(stmtsCode);
 
-        // <<< CORREÇÃO: Adicionar ret.V; explicitamente no final de métodos void >>>
         // Garante que há uma instrução antes do '}'
         if (ollirRetType.equals(".V")) {
             // Adicionar newline se necessário antes do ret
@@ -349,7 +337,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             }
             code.append(RETURN).append(".V").append(END_STMT);
         }
-        // Para métodos não-void, assume-se que um 'ret' explícito foi gerado por visitReturn
 
         code.append(R_BRACKET);
         code.append(NL);
