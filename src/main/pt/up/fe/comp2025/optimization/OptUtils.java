@@ -2,26 +2,17 @@ package pt.up.fe.comp2025.optimization;
 
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
-import static pt.up.fe.comp2025.ast.Kind.TYPE;
-
 import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 import pt.up.fe.specs.util.collections.AccumulatorMap;
 import pt.up.fe.specs.util.exceptions.NotImplementedException;
 
-/**
- * Utility methods related to the optimization middle-end.
- */
 public class OptUtils {
 
-
     private final AccumulatorMap<String> temporaries;
-
     private final AccumulatorMap<String> ifBranches;
-
     private final AccumulatorMap<String> whileBranches;
-
-    private final TypeUtils types;
+    private final TypeUtils types; // Mantido caso seja útil para outras funções
 
     public OptUtils(TypeUtils types) {
         this.types = types;
@@ -30,65 +21,62 @@ public class OptUtils {
         this.whileBranches = new AccumulatorMap<>();
     }
 
-
     public String nextTemp() {
-
         return nextTemp("tmp");
     }
 
     public String nextTemp(String prefix) {
-
-        // Subtract 1 because the base is 1
         var nextTempNum = temporaries.add(prefix) - 1;
-
         return prefix + nextTempNum;
     }
 
-    public String nextIfBranch(){
-        return nextIfBranch("then");
+    public String nextIfBranch() {
+        return nextIfBranch("if"); // Alterado prefixo para clareza
     }
 
-    public String nextIfBranch(String prefix){
+    public String nextIfBranch(String prefix) {
         var nextBranchNum = ifBranches.add(prefix) - 1;
         return prefix + nextBranchNum;
     }
 
-    public String nextWhileBranch(){
+    public String nextWhileBranch() {
         return nextWhileBranch("while");
     }
 
-    public String nextWhileBranch(String prefix){
-        var nextBranchNum = ifBranches.add(prefix) - 1;
+    public String nextWhileBranch(String prefix) {
+        // Usar acumulador diferente para while para evitar colisões com if
+        var nextBranchNum = whileBranches.add(prefix) - 1;
         return prefix + nextBranchNum;
     }
 
     public String toOllirType(JmmNode typeNode) {
-
-
-
-        TYPE.checkOrThrow(typeNode);
-
-        return toOllirType(types.convertType(typeNode));
+        if (Kind.TYPE.check(typeNode) || Kind.BASE_TYPE.check(typeNode)) {
+            // Usa TypeUtils para converter o nó AST para um objeto Type primeiro
+            return toOllirType(TypeUtils.convertType(typeNode));
+        } else {
+            System.err.println("Warning: toOllirType called on non-type node: " + typeNode.getKind());
+            return ".UNKNOWN";
+        }
     }
 
     public String toOllirType(Type type) {
-        return toOllirType(type.getName());
-    }
+        if (type == null) {
+            System.err.println("Warning: toOllirType called with null Type.");
+            return ".UNKNOWN";
+        }
 
-    private String toOllirType(String typeName) {
-
-        String type = "." + switch (typeName) {
+        String ollirBaseType = switch (type.getName()) {
             case "int" -> "i32";
             case "boolean" -> "bool";
             case "void" -> "V";
             case "String" -> "String";
-            case "int[]" -> "array.i32";
-            default -> typeName;
-            //default -> throw new NotImplementedException(typeName);
+            default -> type.getName();
         };
 
-        return type;
+        if (type.isArray()) {
+            return ".array." + ollirBaseType; // Anexa .array se for array
+        } else {
+            return "." + ollirBaseType; // Adiciona . ao tipo base
+        }
     }
-
-
 }
