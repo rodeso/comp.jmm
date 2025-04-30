@@ -297,6 +297,8 @@ public class OllirTest {
     public void arraysInitArray() {
         var result = getOllirResult("arrays/ArrayInit.jmm");
 
+        System.out.println(result.getOllirCode());
+
         var method = CpUtils.getMethod(result, "main");
 
         var calls = CpUtils.assertInstExists(CallInstruction.class, method, result);
