@@ -12,6 +12,7 @@ import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 
 import static pt.up.fe.comp2025.ast.Kind.*;
+import static pt.up.fe.comp2025.ast.TypeUtils.getExprType;
 
 /**
  * Generates OLLIR code from JmmNodes that are not expressions.
@@ -68,9 +69,9 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(ELSE_STMT, this::visitElseStmt);
         addVisit(SIMPLE_EXPR, this::visitSimpleExpr);
         addVisit(WHILE_STMT, this::visitWhileStmt);
-
 //        setDefaultVisit(this::defaultVisit);
     }
+
 
     private String visitVarDecl(JmmNode node, Void unused){
         JmmNode parent = node.getParent();
@@ -102,10 +103,25 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         var left = node.getChild(0);
 
 
+
+
         JmmNode method = TypeUtils.getParentMethod(node);
         Type thisType = types.getExprTypeNotStatic(left,method);
         String typeString = ollirTypes.toOllirType(thisType);
-        var varCode = left.get("name") + typeString;
+
+        String varCode;
+
+        if (Kind.check(left, Kind.ARRAY_ACCESS)) {
+            left = left.getChild(0);
+            var index = node.getChild(1);
+            Type indexType = types.getExprTypeNotStatic(index,method);
+            String indexString = ollirTypes.toOllirType(indexType);
+            varCode = left.get("name")+"[" +index.get("value") +indexString+ "]" +typeString;
+        }
+        else {
+            varCode = left.get("name") + typeString;
+        }
+
 
         if(types.isField(left)){
             code.append(PUT_FIELD).append(L_PARENTHESIS).append("this,").append(varCode)

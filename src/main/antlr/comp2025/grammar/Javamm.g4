@@ -95,12 +95,12 @@ elseStmt
 expr
     : op= '(' expr op= ')' #PriorityExpr
     | op= '!' expr #UnaryExpr
+    | expr '[' expr ']' #ArrayAccess
     | expr op= ('*' | '/') expr #BinaryExpr
     | expr op= ('+' | '-') expr #BinaryExpr
     | expr op= '<' expr #BinaryExpr
     | expr op=('<=' | '==' | '!=' | '+=' | '-=' | '*=' | '/=') expr #BinaryExpr
     | expr op= '&&' expr #BinaryExpr
-    | expr '[' expr ']' #ArrayAccess
     | '[' (expr (',' expr)*)? ']' #ArrayLiteral
     | expr '.' 'length' #LengthExpr
     | expr '.' name=ID '(' ( expr ( ',' expr )* )? ')' #ClassFunctionExpr

@@ -8,8 +8,10 @@ import pt.up.fe.comp2025.ast.TypeUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static pt.up.fe.comp2025.ast.Kind.*;
+import static pt.up.fe.comp2025.ast.TypeUtils.getExprType;
 
 /**
  * Generates OLLIR code from JmmNodes that are expressions.
@@ -45,9 +47,73 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(UNARY_EXPR, this::visitUnaryExpr);
         addVisit(NEW,this::visitNewObject);
         addVisit(PRIORITY_EXPR,this::visitPriorityExpr);
+        addVisit(ARRAY_CREATION, this::visitArrayCreation);
+        addVisit(ARRAY_ACCESS, this::visitArrayAccess);
+        addVisit(OBJECT_REFERENCE, this::visitThis);
 
 //        setDefaultVisit(this::defaultVisit);
     }
+
+    public OllirExprResult visitArrayCreation(JmmNode node, Void unused) {
+        var code = new StringBuilder();
+        var lengthExpr = visit(node.getChild(0));
+        code.append("new(array,").append(SPACE).append(lengthExpr.getRef()).append(")").append(ollirTypes.toOllirType(node));
+
+        return new OllirExprResult(code.toString(), lengthExpr.getComputation());
+    }
+
+    private OllirExprResult visitArrayAccess(JmmNode node, Void unused) {
+
+        JmmNode arrayNode = node.getChild(0);
+        JmmNode indexNode = node.getChild(1);
+
+        OllirExprResult array = visit(arrayNode);
+        OllirExprResult index;
+        Type indexType = getExprType(indexNode);
+
+        var code = new StringBuilder();
+        var computation = new StringBuilder();
+
+        if (!(indexNode.isInstance(INTEGER_LITERAL) || indexNode.isInstance(BOOLEAN_LITERAL))) {
+            index = visitForceTemp(indexNode, ollirTypes.toOllirType(indexType));
+        } else index = visit(indexNode);
+
+        String varName;
+
+        if (arrayNode.isInstance(ARRAY_LITERAL)) {
+            varName = array.getRef();
+            varName = varName.substring(0, varName.indexOf('.'));
+        } else {
+            varName = arrayNode.get("name"); // Node BinaryExpr does not contain attribute 'name'
+        }
+        code.append(varName).append("[").append(index.getRef()).append("]").append(".i32");
+
+        return new OllirExprResult(code.toString(), array.getComputation() + index.getComputation());
+
+
+    }
+
+    public OllirExprResult visitForceTemp(JmmNode node, String type) {
+        var computation = new StringBuilder();
+        String register = ollirTypes.nextTemp();
+        var nodeComp = visit(node);
+
+        computation.append(nodeComp.getComputation());
+
+        final Pattern pattern = Pattern.compile("(.*)(\\.[a-z0-9A-Z]*)");
+        var matcher = pattern.matcher(nodeComp.getRef());
+        if (!matcher.find()) {
+            return nodeComp;
+        }
+        var returnedRegister = matcher.group(1);
+
+        computation.append(String.format("%s%s :=%s %s%s;", register, type, type, returnedRegister, type)).append("\n");
+
+        return new OllirExprResult(register + type, computation);
+
+    }
+
+
 
 
     private OllirExprResult visitInteger(JmmNode node, Void unused) {
@@ -96,7 +162,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         computation.append(rhs.getComputation());
 
         // code to compute self
-        Type resType = types.getExprType(node);
+        Type resType = getExprType(node);
         String resOllirType = ollirTypes.toOllirType(resType);
         String code = ollirTypes.nextTemp() + resOllirType;
 
@@ -104,7 +170,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
                 .append(ASSIGN).append(resOllirType).append(SPACE)
                 .append(lhs.getRef()).append(SPACE);
 
-        Type type = types.getExprType(node);
+        Type type = getExprType(node);
         computation.append(node.get("op")).append(ollirTypes.toOllirType(type)).append(SPACE)
                 .append(rhs.getRef()).append(END_STMT);
 
@@ -167,6 +233,11 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
 
         return new OllirExprResult(reg,computation);
     }
+
+    public OllirExprResult visitThis(JmmNode node, Void unused) {
+        return new OllirExprResult("this." + table.getClassName());
+    }
+
 
     private OllirExprResult visitPriorityExpr(JmmNode node, Void unused){
         return visit(node.getChild(0));
