@@ -78,7 +78,12 @@ public class TypeUtils {
             throw new IllegalArgumentException("Node is not a valid Type or BaseType node: " + typeNode.getKind());
         }
 
-        return new Type(name, isArray);
+        // Representar varargs internamente com '...' no nome para distinção se necessário
+        if (isVarargs) {
+            name += "...";
+        }
+
+        return new Type(name, isArray); // isArray será true para varargs também
     }
 
     public static Type getExprType(JmmNode expr) {
@@ -118,7 +123,7 @@ public class TypeUtils {
             return switch (kind){
                 case CLASS_FUNCTION_EXPR -> getFunctionCallType(expr, this.table);
                 case VAR_REF_EXPR -> varType(expr, method, this.table);
-                case ARRAY_ACCESS -> getArrayAccessElementTypeNotStatic(expr, method);
+                case ARRAY_ACCESS -> getArrayAccessElementTypeNotStatic(expr, method); // Corrigido aqui
                 case OBJECT_REFERENCE -> new Type(this.table.getClassName(), false);
                 case BINARY_EXPR -> getBinaryExprType(expr);
                 case UNARY_EXPR -> getUnaryExprType(expr);
@@ -156,12 +161,9 @@ public class TypeUtils {
     }
 
     private static Type getArrayCreationType(JmmNode arrayCreationNode) {
-        // O primeiro filho (índice 0) é o nó TYPE que define o tipo do *elemento*
         JmmNode typeNode = arrayCreationNode.getChild(0);
-        // Convertemos esse nó para obter o tipo base (ex: int, boolean, MyClass)
         Type elementType = TypeUtils.convertType(typeNode);
-        // O resultado da operação ArrayCreation é SEMPRE um array desse tipo de elemento
-        return new Type(elementType.getName(), true); // Força isArray = true
+        return new Type(elementType.getName(), true);
     }
 
     private static Type getArrayElementType(JmmNode arrayAccess) {
@@ -169,17 +171,29 @@ public class TypeUtils {
         return newIntType();
     }
 
+    // CORRIGIDO getArrayAccessElementTypeNotStatic
     private Type getArrayAccessElementTypeNotStatic(JmmNode arrayAccess, JmmNode method) {
         JmmNode arrayExpr = arrayAccess.getChild(0);
         Type arrayType = getExprTypeNotStatic(arrayExpr, method);
+
         if (arrayType == null) {
-            throw new RuntimeException("Could not determine type for array expression: " + arrayExpr);
+            throw new RuntimeException("Could not determine type for array/varargs expression: " + arrayExpr);
         }
-        if (!arrayType.isArray()) {
-            throw new RuntimeException("Attempting array access on non-array type: " + arrayType.getName() + " for expression " + arrayExpr);
+
+        if (!arrayType.isArray() && !arrayType.getName().endsWith("...")) {
+            throw new RuntimeException("Attempting array access on non-array/non-varargs type: " + arrayType.print() + " for expression " + arrayExpr);
         }
-        return new Type(arrayType.getName(), false);
+
+        String elementTypeName;
+        if (arrayType.getName().endsWith("...")) {
+            elementTypeName = arrayType.getName().replace("...", "");
+        } else {
+            elementTypeName = arrayType.getName();
+        }
+
+        return new Type(elementTypeName, false);
     }
+
 
     private static Type getFunctionCallType(JmmNode functionCall, SymbolTable table) {
         String methodName = functionCall.get("name");
@@ -195,7 +209,10 @@ public class TypeUtils {
     }
 
     public static boolean isAssignable(Type sourceType, Type destinationType) {
-        if (sourceType == null || destinationType == null) return false;
+        if (sourceType == null || destinationType == null) {
+            System.err.println("Warning: isAssignable called with null type(s).");
+            return false;
+        }
 
         if (sourceType.getName().equals(destinationType.getName()) &&
                 sourceType.isArray() == destinationType.isArray()) {
@@ -211,8 +228,7 @@ public class TypeUtils {
             }
         }
 
-        boolean sourceImported = sourceType.hasAttribute("imported") && sourceType.getObject("imported", Boolean.class);
-        boolean destImported = destinationType.hasAttribute("imported") && destinationType.getObject("imported", Boolean.class);
+        // Permitir atribuir T[] a T... ? Ou T a T...? (Melhor tratar em FunctionCall)
 
         return false;
     }

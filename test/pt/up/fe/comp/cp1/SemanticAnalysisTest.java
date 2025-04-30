@@ -319,7 +319,7 @@ public class SemanticAnalysisTest {
     @Test
     public void CallWithVarArgs() {
         var result = TestUtils
-                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/CallWithVarArgs.jmm"));
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/CallWithVarargs.jmm"));
         TestUtils.noErrors(result);
     }
 

@@ -1,0 +1,26 @@
+import io;
+
+class FieldAccess {
+    int counter;
+
+    public void increment(int val) {
+        this.counter = this.counter + val;
+    }
+
+    public int getValue() {
+        return counter;
+    }
+
+    public static void main(String[] args) {
+        FieldAccess fa;
+        int temp;
+        fa = new FieldAccess();
+
+        fa.counter = 5;
+        io.print(fa.counter);
+
+        fa.increment(3);
+        temp = fa.getValue();
+        io.print(temp);
+    }
+}

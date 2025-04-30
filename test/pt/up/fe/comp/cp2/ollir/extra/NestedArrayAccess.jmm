@@ -1,0 +1,28 @@
+import io;
+
+class NestedArrayAccess {
+    public static void main(String[] args) {
+        int[] a;
+        int[] b;
+        int result;
+
+        a = new int[5];
+        b = new int[3];
+
+        a[0] = 10;
+        a[1] = 20;
+        a[2] = 30;
+        a[3] = 40;
+        a[4] = 50;
+
+        b[0] = 0;
+        b[1] = 1;
+        b[2] = 2;
+
+        result = a[b[1]];
+        io.print(result);
+
+         result = a[b[3-1]];
+         io.print(result);
+    }
+}

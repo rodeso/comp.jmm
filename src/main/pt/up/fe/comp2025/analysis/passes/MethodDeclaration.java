@@ -14,8 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static pt.up.fe.comp2025.ast.TypeUtils.getExprType;
-
 public class MethodDeclaration extends AnalysisVisitor {
 
     @Override
@@ -23,151 +21,89 @@ public class MethodDeclaration extends AnalysisVisitor {
         addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
     }
 
-
     private Void visitMethodDecl(JmmNode methodDecl, SymbolTable table){
         TypeUtils typeUtils = new TypeUtils(table);
-
         String methodName = methodDecl.get("name");
-        long methodsWithTheSameName = table.getMethods().stream().filter(name -> name.equals(methodName)).count();
-        if(methodsWithTheSameName > 1){
-            var message = String.format("Methods can only have one definition");
-            addReport(Report.newError(
-                    Stage.SEMANTIC,
-                    methodDecl.getLine(),
-                    methodDecl.getColumn(),
-                    message,
-                    null)
-            );
-            return null;
+
+        long methodsWithSameName = table.getMethods().stream().filter(name -> name.equals(methodName)).count();
+        if(methodsWithSameName > 1){
+            addReport(newError(methodDecl, "Method '" + methodName + "' is defined more than once."));
         }
 
         List<Symbol> parameters = table.getParameters(methodName);
-        Map<String, Long> parameterCounts = parameters.stream()
-                .collect(Collectors.groupingBy(Symbol::getName, Collectors.counting()));
+        if (parameters != null) {
+            Map<String, Long> parameterCounts = parameters.stream()
+                    .collect(Collectors.groupingBy(Symbol::getName, Collectors.counting()));
 
-        if(!parameterCounts.isEmpty()){
-            for(Map.Entry<String,Long> paramCount : parameterCounts.entrySet()){
-                if(paramCount.getValue() > 1){
-                    var message = String.format("Parameter '%s' is not unique",paramCount.getKey());
-                    addReport(Report.newError(
-                            Stage.SEMANTIC,
-                            methodDecl.getLine(),
-                            methodDecl.getColumn(),
-                            message,
-                            null)
-                    );
-                    return null;
+            parameterCounts.forEach((paramName, count) -> {
+                if (count > 1) {
+                    addReport(newError(methodDecl, "Parameter '" + paramName + "' is duplicated in method '" + methodName + "'."));
+                }
+            });
+
+            for(int i = 0; i < parameters.size() - 1; i++){
+                if(parameters.get(i).getType().getName().endsWith("...")){
+                    addReport(newError(methodDecl, "Varargs parameter must be the last one in method '" + methodName + "'."));
+                    break;
                 }
             }
         }
 
-        if(!parameters.isEmpty()){
-            for(int i=0;i<parameters.size()-1;i++){
-                if(parameters.get(i).getType().getName().equals("int...")){
-                    var message = String.format("Varargs must be the last parameter");
-                    addReport(Report.newError(
-                            Stage.SEMANTIC,
-                            methodDecl.getLine(),
-                            methodDecl.getColumn(),
-                            message,
-                            null)
-                    );
-                }
-            }
+        Type expectedReturnType = table.getReturnType(methodName);
+        if (expectedReturnType != null && expectedReturnType.getName().endsWith("...")) {
+            addReport(newError(methodDecl, "Method '" + methodName + "' cannot return a varargs type."));
         }
 
-
-
-
-        if(methodName.equals("main"))
+        if(methodName.equals("main")) {
             return null;
-        JmmNode returnExpr = methodDecl.getChild(methodDecl.getNumChildren()-1).getChild(0);
-
-        Type type = table.getReturnType(methodDecl.get("name"));
-        Type returnType = typeUtils.getExprTypeNotStatic(returnExpr,methodDecl);
-        //Type returnType = getExprType(returnExpr);
-
-        if(returnType == null && Kind.CLASS_FUNCTION_EXPR.check(returnExpr)){
-            JmmNode object = returnExpr.getChild(0);
-            Type objectType = typeUtils.getExprTypeNotStatic(object,methodDecl);
-            List<String> imports = table.getImports();
-
-            if(imports.contains(objectType.getName()))
-                return null;
-        }
-        if(type.getName().equals("int...")){
-            var message = String.format("Method can not return varargs");
-            addReport(Report.newError(
-                    Stage.SEMANTIC,
-                    methodDecl.getLine(),
-                    methodDecl.getColumn(),
-                    message,
-                    null)
-            );
-        }
-//        if(Kind.VAR_REF_EXPR.check(returnExpr)){
-//            returnType = varType(returnExpr,methodDecl,table);
-//        }
-//
-//        if(Kind.ARRAY_ACCESS.check(returnExpr)){
-//            returnType = varType((returnExpr.getChild(0)),methodDecl,table);
-//            returnType = new Type(returnType.getName(),false);
-//        }
-
-        if(!type.equals(returnType)){
-            if(returnType.getName().equals("int...") && type.getName().equals("int"))
-                return null;
-            var message = String.format("Method of type '%s' can not return %s.",type,returnType.toString());
-            addReport(Report.newError(
-                    Stage.SEMANTIC,
-                    methodDecl.getLine(),
-                    methodDecl.getColumn(),
-                    message,
-                    null)
-            );
         }
 
+        List<JmmNode> returnStmts = methodDecl.getChildren(Kind.RETURN_STMT);
 
+        if (returnStmts.isEmpty() && (expectedReturnType != null && !expectedReturnType.getName().equals("void"))) {
+            addReport(newError(methodDecl, "Missing return statement in non-void method '" + methodName + "'."));
+            return null;
+        }
+        if (!returnStmts.isEmpty() && expectedReturnType != null && expectedReturnType.getName().equals("void")) {
+            for (JmmNode returnStmt : returnStmts) {
+                if (returnStmt.getNumChildren() > 0) {
+                    addReport(newError(returnStmts.get(0), "Return statement with value found in void method '" + methodName + "'."));
+                }
+            }
+        }
+
+        for (JmmNode returnStmt : returnStmts) {
+            if (returnStmt.getNumChildren() == 0) {
+                if (expectedReturnType != null && !expectedReturnType.getName().equals("void")) {
+                    addReport(newError(returnStmt, "Return statement in method '" + methodName + "' must return a value of type '" + expectedReturnType.print() + "'."));
+                }
+                continue;
+            }
+
+            JmmNode returnExpr = returnStmt.getChild(0);
+            Type actualReturnType = typeUtils.getExprTypeNotStatic(returnExpr, methodDecl);
+
+            if (actualReturnType == null) {
+                addReport(newError(returnExpr, "Could not determine type of return expression in method '" + methodName + "'."));
+                continue;
+            }
+
+            // <<< CORREÇÃO FINAL: Ignorar verificação se tipo atual for o placeholder >>>
+            if (actualReturnType.getName().equals("imported_or_unknown")) {
+                System.out.println("Skipping return type check for expression resulting in unknown/imported type in " + methodName);
+                continue; // Assume que está correto se não conseguimos determinar o tipo real
+            }
+
+            if (expectedReturnType == null) {
+                addReport(newError(methodDecl, "Internal error: Could not find expected return type for method '" + methodName + "'."));
+                continue;
+            }
+
+            if (!TypeUtils.isAssignable(actualReturnType, expectedReturnType)) {
+                addReport(newError(returnStmt, "Incompatible return type in method '" + methodName + "'. Expected '" + expectedReturnType.print() + "' but found '" + actualReturnType.print() + "'."));
+            }
+        }
 
         return null;
-    }
-
-
-    private Type varType(JmmNode varRefNode,JmmNode method, SymbolTable symbolTable){
-        Type type = null;
-        String methodName = method.get("name");
-
-        List<Symbol> varsFromMethod = symbolTable.getLocalVariables(methodName);
-        if(varsFromMethod != null){
-            for(Symbol symbol : varsFromMethod){
-                if(symbol.getName().equals(varRefNode.get("name"))){
-                    type = symbol.getType();
-                }
-            }
-        }
-
-
-        List<Symbol> fields = symbolTable.getFields();
-
-        if(fields != null){
-            for(Symbol symbol : fields){
-                if(symbol.getName().equals(varRefNode.get("name"))){
-                    type = symbol.getType();
-                }
-            }
-        }
-
-        List<Symbol> params = symbolTable.getParameters(methodName);
-
-        if(params != null){
-            for(Symbol symbol : params){
-                if(symbol.getName().equals(varRefNode.get("name"))){
-                    type = symbol.getType();
-                }
-            }
-        }
-
-
-        return type;
     }
 }

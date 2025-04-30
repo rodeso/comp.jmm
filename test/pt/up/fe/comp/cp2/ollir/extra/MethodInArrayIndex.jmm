@@ -1,0 +1,32 @@
+import io;
+
+class MethodInArrayIndex {
+    int[] data;
+
+    public int[] initData(int size) {
+        data = new int[size];
+        data[0] = 11;
+        data[1] = 22;
+        data[2] = 33;
+        return data;
+    }
+
+    public int getIndex() {
+        return 1;
+    }
+
+    public static void main(String[] args) {
+        MethodInArrayIndex obj;
+        int[] localArr;
+        int temp;
+
+        obj = new MethodInArrayIndex();
+        localArr = obj.initData(3);
+
+        temp = localArr[obj.getIndex()];
+        io.print(temp);
+
+        localArr[obj.getIndex()] = 99;
+        io.print(localArr[1]);
+    }
+}
