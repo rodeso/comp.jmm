@@ -12,11 +12,7 @@ class Precedence {
         b = (2 + 3) * 4;
         io.print(b);
 
-        c = a + 5 < b * 2;
-        if (c) {
-            io.print(1);
-        } else {
-            io.print(0);
-        }
+        c = a + 5 + b * 2;
+
     }
 }

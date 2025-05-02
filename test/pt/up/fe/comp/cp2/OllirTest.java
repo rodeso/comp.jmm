@@ -323,6 +323,8 @@ public class OllirTest {
     public void arraysAccessArray() {
         var result = getOllirResult("arrays/ArrayAccess.jmm");
 
+        System.out.println(result.getOllirCode());
+
         var method = CpUtils.getMethod(result, "foo");
 
         var assigns = CpUtils.assertInstExists(AssignInstruction.class, method, result);

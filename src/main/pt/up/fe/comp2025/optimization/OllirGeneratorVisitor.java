@@ -111,19 +111,40 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         String varCode;
 
+        boolean isArrayAcess = false;
+
         if (Kind.check(left, Kind.ARRAY_ACCESS)) {
+            isArrayAcess = true;
+
+            var index = left.getChild(1);
             left = left.getChild(0);
-            var index = node.getChild(1);
+
             Type indexType = types.getExprTypeNotStatic(index,method);
             String indexString = ollirTypes.toOllirType(indexType);
-            varCode = left.get("name")+"[" +index.get("value") +indexString+ "]" +typeString;
+            var indexComp = exprVisitor.visit(index);
+            code.append(indexComp.getComputation());
+            varCode = left.get("name")+"[" +indexComp.getRef() +indexString+ "]" +typeString;
+            if(types.isField(left)){
+                var tmpArray = ollirTypes.nextTemp();
+                // code for getfield
+                code.append(tmpArray).append(typeString).append(SPACE)
+                        .append(ASSIGN).append(typeString).append(SPACE)
+                        .append("getfield(this,").append(left.get("name"))
+                        .append(typeString).append(")").append(typeString).append(END_STMT);
+
+                // assign in right index
+                code.append(tmpArray).append(typeString)
+                        .append("[" +indexComp.getRef() +indexString+ "]")
+                        .append(".i32").append(SPACE).append(ASSIGN).append(".i32")
+                        .append(SPACE).append(rhs.getRef()).append(END_STMT);
+            }
         }
         else {
             varCode = left.get("name") + typeString;
         }
 
 
-        if(types.isField(left)){
+        if(types.isField(left) && !isArrayAcess){
             code.append(PUT_FIELD).append(L_PARENTHESIS).append("this,").append(varCode)
                     .append(",").append(rhs.getRef()).append(R_PARENTHESIS).append(".V").append(END_STMT);
             return code.toString();

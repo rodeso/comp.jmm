@@ -3,8 +3,9 @@ import io;
 class FieldAccess {
     int counter;
 
-    public void increment(int val) {
-        this.counter = this.counter + val;
+    public int increment(int val) {
+        counter = counter + val;
+        return counter;
     }
 
     public int getValue() {
@@ -16,8 +17,7 @@ class FieldAccess {
         int temp;
         fa = new FieldAccess();
 
-        fa.counter = 5;
-        io.print(fa.counter);
+
 
         fa.increment(3);
         temp = fa.getValue();

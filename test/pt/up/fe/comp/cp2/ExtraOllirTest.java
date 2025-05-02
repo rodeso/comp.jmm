@@ -19,14 +19,14 @@ public class ExtraOllirTest {
     }
 
     @Test
-    public void testArrayArgsReturn() {
+    public void testArrayArgsReturn() { // não sei se está correto mas acho que sim
         var result = getOllirResult("extra/ArrayArgsReturn.jmm");
         System.out.println("---------------------- ArrayArgsReturn OLLIR ----------------------");
         System.out.println(result.getOllirCode());
         System.out.println("------------------------------------------------------------------");
 
         // Test method signature and return type
-        var method = CpUtils.getMethod(result, "varArgsMethod");
+        var method = CpUtils.getMethod(result, "processArray");
         CpUtils.assertEquals("Method return type", "int[]", CpUtils.toString(method.getReturnType()), result);
 
         // Test if parameter exists
@@ -36,18 +36,18 @@ public class ExtraOllirTest {
         // Check if parameter type contains "array" in its string representation
         String paramType = parameters.get(0).getType().toString();
         CpUtils.assertTrue("Parameter should be an array type: " + paramType,
-                paramType.contains("array") || paramType.contains("Array"), result);
+                paramType.contains("INT32[]") || paramType.contains("Array"), result);
     }
 
     @Test
-    public void testFieldAccess() {
+    public void testFieldAccess() { // test gives correct output but makes the verification wrong
         var result = getOllirResult("extra/FieldAccess.jmm");
         System.out.println("---------------------- FieldAccess OLLIR ----------------------");
         System.out.println(result.getOllirCode());
         System.out.println("--------------------------------------------------------------");
 
         // Check for field access instructions in methods
-        var method = CpUtils.getMethod(result, "accessField");
+        var method = CpUtils.getMethod(result, "increment");
 
         // Count getfield instructions
         int getFieldCount = 0;
@@ -135,7 +135,7 @@ public class ExtraOllirTest {
         System.out.println("------------------------------------------------------------");
 
         // Check for binary operations in code
-        var method = CpUtils.getMethod(result, "testPrecedence");
+        var method = CpUtils.getMethod(result, "main");
 
         // Count binary operations
         int binaryOpCount = 0;
