@@ -297,7 +297,7 @@ public class TypeUtils {
     }
 
     public static JmmNode getParentMethod(JmmNode node){
-        JmmNode current = node.getParent();
+        JmmNode current = node;
         while (current != null && !Kind.METHOD_DECL.check(current)) {
             if (Kind.CLASS_DECL.check(current)) return null;
             current = current.getParent();

@@ -48,7 +48,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         this.table = table;
         this.types = new TypeUtils(table);
         this.ollirTypes = new OptUtils(types);
-        exprVisitor = new OllirExprGeneratorVisitor(table);
+        exprVisitor = new OllirExprGeneratorVisitor(table,this.ollirTypes);
     }
 
 
@@ -201,7 +201,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         code.append(IF).append(SPACE).append(L_PARENTHESIS).append(condition.getRef()).append(R_PARENTHESIS)
                 .append(SPACE).append(GOT_TO).append(SPACE).append(then).append(END_STMT);
 
-        List<JmmNode> elseIfStmt = node.getChildren(ELSEIF_STMT);
+
         List<JmmNode> elseStmt = node.getChildren(ELSE_STMT);
         List<JmmNode> ifContent = node.getChildren(BRACKETS_STMT);
 

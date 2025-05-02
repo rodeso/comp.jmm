@@ -37,10 +37,10 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
     private final OptUtils ollirTypes;
 
 
-    public OllirExprGeneratorVisitor(SymbolTable table) {
+    public OllirExprGeneratorVisitor(SymbolTable table, OptUtils optUtils) {
         this.table = table;
         this.types = new TypeUtils(table);
-        this.ollirTypes = new OptUtils(types);
+        this.ollirTypes = optUtils;
     }
 
 
@@ -267,6 +267,36 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         var rhs = visit(node.getChild(1));
 
         StringBuilder computation = new StringBuilder();
+
+        if(node.get("op").equals("&&")){
+            // short circuit
+            var firstIf = ollirTypes.nextIfBranch();
+            var firstEnd = "endif"+firstIf.substring(4);
+            var andTmp = ollirTypes.nextTemp("andTmp");
+            // verify if 1st condition is true
+            computation.append(lhs.getComputation());
+            computation.append("if(").append(lhs.getRef()).append(")").append(SPACE)
+                    .append("goto").append(SPACE).append(firstIf).append(END_STMT);
+
+            // if it is not
+            computation.append(andTmp).append(".bool").append(SPACE)
+                    .append(ASSIGN).append(".bool").append(SPACE).append("false.bool")
+                    .append(END_STMT);
+            computation.append("goto ").append(firstEnd).append(END_STMT);
+
+            // if it is verify the second part
+            computation.append(firstIf).append(":\n");
+            computation.append(rhs.getComputation());
+            computation.append(andTmp).append(".bool").append(SPACE)
+                    .append(ASSIGN).append(".bool").append(SPACE)
+                    .append(rhs.getRef()).append(END_STMT);
+            // in case 1st is false continue to rest of the code
+            computation.append(firstEnd).append(":\n");
+
+
+
+            return new OllirExprResult(andTmp+".bool",computation);
+        }
 
         // code to compute the children
         computation.append(lhs.getComputation());

@@ -227,7 +227,7 @@ public class OllirTest {
 
 
         CpUtils.assertTrue("Expected at least 2 branches, found " + numBranches, numBranches >= 2, ollirResult);
-        CpUtils.assertHasOperation(OperationType.ANDB, method, ollirResult);
+        
     }
 
     @Test
