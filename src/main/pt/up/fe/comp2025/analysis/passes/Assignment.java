@@ -110,39 +110,7 @@ public class Assignment extends AnalysisVisitor {
         return null;
     }
 
-    private Type varType(JmmNode varRefNode,JmmNode method, SymbolTable symbolTable){
-        Type type = null;
 
-        String methodName = method.get("name");
-
-        List<Symbol> varsFromMethod = symbolTable.getLocalVariables(methodName);
-
-        for(Symbol symbol : varsFromMethod){
-            if(symbol.getName().equals(varRefNode.get("name"))){
-                type = symbol.getType();
-            }
-        }
-
-        List<Symbol> fields = symbolTable.getFields();
-
-        for(Symbol symbol : fields){
-            if(symbol.getName().equals(varRefNode.get("name"))){
-                type = symbol.getType();
-            }
-        }
-
-        List<Symbol> params = symbolTable.getParameters(methodName);
-
-        if(params != null){
-            for(Symbol symbol : params){
-                if(symbol.getName().equals(varRefNode.get("name"))){
-                    type = symbol.getType();
-                }
-            }
-        }
-
-        return type;
-    }
 
 }
 

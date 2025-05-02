@@ -174,7 +174,7 @@ public class OllirTest {
     @Test
     public void basicClass() {
         var result = getOllirResult("basic/BasicClass.jmm");
-
+        System.out.println(result.getOllirCode());
         compileBasic(result.getOllirClass());
     }
 

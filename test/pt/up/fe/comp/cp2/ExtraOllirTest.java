@@ -111,7 +111,7 @@ public class ExtraOllirTest {
         System.out.println("------------------------------------------------------------------");
 
         // Check for array operations in code
-        var method = CpUtils.getMethod(result, "accessNestedArray");
+        var method = CpUtils.getMethod(result, "main");
 
         // Count array store operations
         int arrayStoreCount = 0;

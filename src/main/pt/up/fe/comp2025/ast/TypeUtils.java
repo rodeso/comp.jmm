@@ -103,9 +103,10 @@ public class TypeUtils {
                 case ARRAY_LITERAL -> new Type("int", true);
                 case LENGTH_EXPR -> newIntType();
                 case OBJECT_REFERENCE -> new Type(expr.get("value"), false);
+                case VAR_DECL -> getVarDecl(expr);
                 case VAR_REF_EXPR, CLASS_FUNCTION_EXPR ->
                         throw new UnsupportedOperationException("Cannot compute static type for '" + kind + "'. Use non-static getExprTypeNotStatic.");
-                case RETURN_STMT, VAR_DECL ->
+                case RETURN_STMT->
                         throw new IllegalArgumentException("Cannot get expression type for statement kind '" + kind + "'");
                 default -> throw new UnsupportedOperationException("Can't compute static type for expression kind '" + kind + "'");
             };
@@ -125,17 +126,11 @@ public class TypeUtils {
                 case VAR_REF_EXPR -> varType(expr, method, this.table);
                 case ARRAY_ACCESS -> getArrayAccessElementTypeNotStatic(expr, method); // Corrigido aqui
                 case OBJECT_REFERENCE -> new Type(this.table.getClassName(), false);
-                case BINARY_EXPR -> getBinaryExprType(expr);
-                case UNARY_EXPR -> getUnaryExprType(expr);
-                case INTEGER_LITERAL -> newIntType();
-                case BOOLEAN_LITERAL -> newBooleanType();
-                case ARRAY_CREATION -> getArrayCreationType(expr);
                 case PRIORITY_EXPR -> getExprTypeNotStatic(expr.getChild(0), method);
-                case ARRAY_LITERAL -> new Type("int", true);
                 case LENGTH_EXPR -> newIntType();
-                case RETURN_STMT, VAR_DECL ->
+                case RETURN_STMT->
                         throw new IllegalArgumentException("Cannot get expression type for statement kind '" + kind + "'");
-                default -> throw new UnsupportedOperationException("Can't compute non-static type for expression kind '" + kind + "'");
+                default -> getExprType(expr);
             };
         } catch (Exception e) {
             String location = "unknown location";
@@ -242,6 +237,18 @@ public class TypeUtils {
         return false;
     }
 
+    private static Type getVarDecl(JmmNode node){
+        JmmNode varType = node.getChild(0);
+        String name = varType.getChild(0).get("name");
+        boolean isArray = false;
+        String op1 = varType.getOptional("op1").orElse("");
+        String op2 = varType.getOptional("op2").orElse("");
+        if(op1.equals("[") && op2.equals("]")){
+            isArray=true;
+        }
+        return new Type(name, isArray);
+    }
+
     private Type varType(JmmNode varRefNode, JmmNode method, SymbolTable symbolTable){
         String varName = varRefNode.get("name");
         String methodName = (method != null) ? method.get("name") : null;
@@ -290,7 +297,7 @@ public class TypeUtils {
     }
 
     public static JmmNode getParentMethod(JmmNode node){
-        JmmNode current = node;
+        JmmNode current = node.getParent();
         while (current != null && !Kind.METHOD_DECL.check(current)) {
             if (Kind.CLASS_DECL.check(current)) return null;
             current = current.getParent();
