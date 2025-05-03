@@ -1,11 +1,11 @@
 package pt.up.fe.comp2025.optimization;
 
+import java.util.Collections;
+
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp2025.CompilerConfig;
-
-import java.util.Collections;
 
 public class JmmOptimizationImpl implements JmmOptimization {
 
@@ -43,7 +43,14 @@ public class JmmOptimizationImpl implements JmmOptimization {
     @Override
     public OllirResult optimize(OllirResult ollirResult) {
 
-        //TODO: Do your OLLIR-based optimizations here
+        //TODO: Register allocation
+
+        int maxRegs = Integer.parseInt(ollirResult.getConfig().getOrDefault("registerAllocation", "-1"));
+
+        if(maxRegs >= 0) {
+            RegisterAllocator regAlloc = new RegisterAllocator(ollirResult, maxRegs);
+            regAlloc.optimizeRegisters();
+        }
 
         return ollirResult;
     }
