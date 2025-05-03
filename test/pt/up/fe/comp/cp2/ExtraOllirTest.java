@@ -40,7 +40,7 @@ public class ExtraOllirTest {
     }
 
     @Test
-    public void testFieldAccess() { // test gives correct output but makes the verification wrong
+    public void testFieldAccess() {
         var result = getOllirResult("extra/FieldAccess.jmm");
         System.out.println("---------------------- FieldAccess OLLIR ----------------------");
         System.out.println(result.getOllirCode());
@@ -50,18 +50,10 @@ public class ExtraOllirTest {
         var method = CpUtils.getMethod(result, "increment");
 
         // Count getfield instructions
-        int getFieldCount = 0;
+        int getFieldCount = CpUtils.getInstructions(GetFieldInstruction.class, method).size();
         // Count putfield instructions
-        int putFieldCount = 0;
+        int putFieldCount = CpUtils.getInstructions(PutFieldInstruction.class, method).size();
 
-        for (Instruction inst : method.getInstructions()) {
-            if (inst instanceof GetFieldInstruction) {
-                getFieldCount++;
-            }
-            if (inst instanceof PutFieldInstruction) {
-                putFieldCount++;
-            }
-        }
 
         CpUtils.assertTrue("Should have at least one getfield instruction", getFieldCount >= 1, result);
         CpUtils.assertTrue("Should have at least one putfield instruction", putFieldCount >= 1, result);
