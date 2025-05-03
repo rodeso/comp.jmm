@@ -50,7 +50,11 @@ public class ConstantFolding extends PreorderJmmVisitor<Void, Void> {
 
             this.setHasModified(true);
 
-            expr.replace(newChild);
+            //expr.replace(newChild);
+            JmmNode parent = expr.getParent();
+            int childIndex = expr.getIndexOfSelf();
+            parent.removeChild(childIndex);
+            parent.add(newChild,childIndex);
 
             return null;
 
