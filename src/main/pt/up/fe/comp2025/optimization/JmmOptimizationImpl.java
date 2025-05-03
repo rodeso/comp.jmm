@@ -3,6 +3,7 @@ package pt.up.fe.comp2025.optimization;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
+import pt.up.fe.comp2025.CompilerConfig;
 
 import java.util.Collections;
 
@@ -26,6 +27,15 @@ public class JmmOptimizationImpl implements JmmOptimization {
     public JmmSemanticsResult optimize(JmmSemanticsResult semanticsResult) {
 
         //TODO: Do your AST-based optimizations here
+        if(CompilerConfig.getOptimize(semanticsResult.getConfig())){
+
+            // do the optimizations
+            ConstantFolding constantFolding = new ConstantFolding();
+            do {
+                constantFolding.setHasModified(false);
+                constantFolding.visit(semanticsResult.getRootNode());
+            } while (constantFolding.hasModified());
+        }
 
         return semanticsResult;
     }
