@@ -31,10 +31,17 @@ public class JmmOptimizationImpl implements JmmOptimization {
 
             // do the optimizations
             ConstantFolding constantFolding = new ConstantFolding();
+            ConstantPropagation constantPropagation = new ConstantPropagation();
+
             do {
                 constantFolding.setHasModified(false);
+                constantPropagation.setHasModified(false);
+
+
                 constantFolding.visit(semanticsResult.getRootNode());
-            } while (constantFolding.hasModified());
+                constantPropagation.visit(semanticsResult.getRootNode());
+
+            } while (constantFolding.hasModified() || constantPropagation.hasModified());
         }
 
         return semanticsResult;
