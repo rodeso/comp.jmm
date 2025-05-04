@@ -1,14 +1,12 @@
 package pt.up.fe.comp2025.optimization;
 
+import pt.up.fe.comp.jmm.ollir.OllirResult;
 import org.specs.comp.ollir.*;
 import org.specs.comp.ollir.inst.*;
-import pt.up.fe.comp.jmm.ollir.OllirResult;
+import org.specs.comp.ollir.type.*;
 
 import java.util.*;
 
-/**
- * Register allocator using graph coloring.
- */
 public class RegisterAllocator {
     private final OllirResult ollirResult;
     private final int maxRegisters;
@@ -20,340 +18,234 @@ public class RegisterAllocator {
 
     public void optimizeRegisters() {
         ClassUnit classUnit = ollirResult.getOllirClass();
-
-        // Build CFGs for all methods
         classUnit.buildCFGs();
 
-        // Process each method in the class
         for (Method method : classUnit.getMethods()) {
-            // Skip methods with no variables to optimize
-            if (method.getVarTable().isEmpty()) {
-                continue;
-            }
-
-            optimizeRegistersForMethod(method);
+            List<Instruction> instrs = method.getInstructions();
+            if (instrs.isEmpty()) continue;
+            optimizeRegistersForMethod(method, instrs);
         }
     }
 
-    private void optimizeRegistersForMethod(Method method) {
-        // Get method instructions
-        List<Instruction> instructions = method.getInstructions();
-        if (instructions.isEmpty()) {
-            return; // Skip methods with no instructions
-        }
-
-        // 1. Perform liveness analysis
+    private void optimizeRegistersForMethod(Method method, List<Instruction> instrs) {
         Map<Instruction, Set<String>> defSets = new HashMap<>();
         Map<Instruction, Set<String>> useSets = new HashMap<>();
+        Map<String, Type> varTypes = new HashMap<>();
+        computeDefUse(method, defSets, useSets, varTypes);
+
         Map<Instruction, Set<String>> inSets = new HashMap<>();
         Map<Instruction, Set<String>> outSets = new HashMap<>();
+        performLiveness(instrs, defSets, useSets, inSets, outSets);
 
-        computeDefUse(method, defSets, useSets);
-        performLivenessAnalysis(method, defSets, useSets, inSets, outSets);
+        Map<String, Set<String>> interference = buildInterference(defSets, outSets, method, varTypes);
 
-        // 2. Build interference graph
-        Map<String, Set<String>> interferenceGraph = buildInterferenceGraph(method, defSets, outSets);
+        Map<String, Integer> coloring = colorGraph(interference, method);
 
-        // 3. Apply graph coloring
-        Map<String, Integer> colorAssignment = colorGraph(interferenceGraph, method);
+        updateVarTable(method, coloring, varTypes);
 
-        // 4. Update register allocation
-        updateRegisterAllocation(method, colorAssignment);
+        printRegisters(method, coloring);
     }
 
-    private void computeDefUse(Method method, Map<Instruction, Set<String>> defSets, Map<Instruction, Set<String>> useSets) {
-        for (Instruction instruction : method.getInstructions()) {
-            Set<String> defSet = new HashSet<>();
-            Set<String> useSet = new HashSet<>();
+    private void computeDefUse(Method method, Map<Instruction, Set<String>> defSets, Map<Instruction, Set<String>> useSets, Map<String, Type> varTypes) {
+        for (Map.Entry<String, Descriptor> entry : method.getVarTable().entrySet()) {
+            varTypes.put(entry.getKey(), entry.getValue().getVarType());
+        }
 
-            if (instruction instanceof AssignInstruction) {
-                AssignInstruction assignInst = (AssignInstruction) instruction;
-                // The assigned variable is defined
-                if (assignInst.getDest() instanceof Operand) {
-                    Operand dest = (Operand) assignInst.getDest();
-                    if (dest.getName() != null) {
-                        defSet.add(dest.getName());
-                    }
+        for (Instruction instr : method.getInstructions()) {
+            Set<String> defs = new HashSet<>();
+            Set<String> uses = new HashSet<>();
+
+            if (instr instanceof AssignInstruction) {
+                AssignInstruction ai = (AssignInstruction) instr;
+                Element dest = ai.getDest();
+                if (dest instanceof Operand) {
+                    Operand od = (Operand) dest;
+                    defs.add(od.getName());
+                    varTypes.putIfAbsent(od.getName(), od.getType());
                 }
-
-                // Process the right-hand side as uses
-                extractUsesFromInstruction(assignInst.getRhs(), useSet);
+                if (ai.getRhs() != null) {
+                    extractUsesFromInstruction(ai.getRhs(), uses, varTypes);
+                }
             } else {
-                // For other instruction types, all operands are considered used
-                extractUsesFromInstruction(instruction, useSet);
+                extractUsesFromInstruction(instr, uses, varTypes);
             }
 
-            defSets.put(instruction, defSet);
-            useSets.put(instruction, useSet);
+            defSets.put(instr, defs);
+            useSets.put(instr, uses);
         }
     }
 
-    private void extractUsesFromInstruction(Instruction instruction, Set<String> useSet) {
-        if (instruction instanceof SingleOpInstruction) {
-            SingleOpInstruction singleOp = (SingleOpInstruction) instruction;
-            extractUseFromElement(singleOp.getSingleOperand(), useSet);
-
-        } else if (instruction instanceof BinaryOpInstruction) {
-            BinaryOpInstruction binaryOp = (BinaryOpInstruction) instruction;
-            extractUseFromElement(binaryOp.getLeftOperand(), useSet);
-            extractUseFromElement(binaryOp.getRightOperand(), useSet);
-
-        } else if (instruction instanceof UnaryOpInstruction) {
-            UnaryOpInstruction unaryOp = (UnaryOpInstruction) instruction;
-            extractUseFromElement(unaryOp.getOperand(), useSet);
-
-        } else if (instruction instanceof CallInstruction) {
-            CallInstruction callInst = (CallInstruction) instruction;
-
-            Element caller = callInst.getCaller();
-            if (caller != null) {
-                extractUseFromElement(caller, useSet);
-            }
-
-            for (Element arg : callInst.getArguments()) {
-                extractUseFromElement(arg, useSet);
-            }
-
-        } else if (instruction instanceof ReturnInstruction) {
-            ReturnInstruction returnInst = (ReturnInstruction) instruction;
-            returnInst.getOperand().ifPresent(op -> extractUseFromElement(op, useSet));
-
-        } else if (instruction instanceof CondBranchInstruction) {
-            CondBranchInstruction condInst = (CondBranchInstruction) instruction;
-            for (Element element : condInst.getOperands()) {
-                extractUseFromElement(element, useSet);
-            }
-
-        } else if (instruction instanceof PutFieldInstruction) {
-            PutFieldInstruction putField = (PutFieldInstruction) instruction;
-            List<Element> operands = putField.getOperands();
-
-            // Usually: [targetObject, fieldName (unused), value]
-            if (operands.size() > 0) extractUseFromElement(operands.get(0), useSet); // target object
-            if (operands.size() > 2) extractUseFromElement(operands.get(2), useSet); // value to store
-
-        } else if (instruction instanceof GetFieldInstruction) {
-            GetFieldInstruction getField = (GetFieldInstruction) instruction;
-            List<Element> operands = getField.getOperands();
-
-            // Usually: [targetObject, fieldName]
-            if (operands.size() > 0) extractUseFromElement(operands.get(0), useSet); // target object
+    private void extractUsesFromInstruction(Instruction instr, Set<String> uses, Map<String, Type> varTypes) {
+        if (instr instanceof SingleOpInstruction) {
+            recordUse(((SingleOpInstruction) instr).getSingleOperand(), uses, varTypes);
+        } else if (instr instanceof BinaryOpInstruction) {
+            BinaryOpInstruction b = (BinaryOpInstruction) instr;
+            recordUse(b.getLeftOperand(), uses, varTypes);
+            recordUse(b.getRightOperand(), uses, varTypes);
+        } else if (instr instanceof UnaryOpInstruction) {
+            recordUse(((UnaryOpInstruction) instr).getOperand(), uses, varTypes);
+        } else if (instr instanceof CallInstruction) {
+            CallInstruction c = (CallInstruction) instr;
+            if (c.getCaller() != null) recordUse(c.getCaller(), uses, varTypes);
+            for (Element arg : c.getArguments()) recordUse(arg, uses, varTypes);
+        } else if (instr instanceof ReturnInstruction) {
+            ((ReturnInstruction) instr).getOperand().ifPresent(op -> recordUse(op, uses, varTypes));
+        } else if (instr instanceof CondBranchInstruction) {
+            for (Element e : ((CondBranchInstruction) instr).getOperands())
+                recordUse(e, uses, varTypes);
+        } else if (instr instanceof PutFieldInstruction) {
+            List<Element> ops = ((PutFieldInstruction) instr).getOperands();
+            if (!ops.isEmpty()) recordUse(ops.get(0), uses, varTypes);
+            if (ops.size() > 2) recordUse(ops.get(2), uses, varTypes);
+        } else if (instr instanceof GetFieldInstruction) {
+            List<Element> ops = ((GetFieldInstruction) instr).getOperands();
+            if (!ops.isEmpty()) recordUse(ops.get(0), uses, varTypes);
         }
     }
 
-    private void extractUseFromElement(Element element, Set<String> useSet) {
-        if (element instanceof Operand) {
-            Operand operand = (Operand) element;
-            if (operand.getName() != null) {
-                useSet.add(operand.getName());
-            }
-        } else if (element instanceof ArrayOperand) {
-            ArrayOperand arrayOp = (ArrayOperand) element;
-            if (arrayOp.getName() != null) {
-                useSet.add(arrayOp.getName());
-            }
-            for (Element indexElement : arrayOp.getIndexOperands()) {
-                extractUseFromElement(indexElement, useSet);
-            }
+    private void recordUse(Element e, Set<String> uses, Map<String, Type> varTypes) {
+        if (e instanceof Operand) {
+            Operand o = (Operand) e;
+            uses.add(o.getName());
+            varTypes.putIfAbsent(o.getName(), o.getType());
+        } else if (e instanceof ArrayOperand) {
+            ArrayOperand a = (ArrayOperand) e;
+            uses.add(a.getName());
+            varTypes.putIfAbsent(a.getName(), a.getType());
+            for (Element idx : a.getIndexOperands()) recordUse(idx, uses, varTypes);
         }
     }
 
-    private void performLivenessAnalysis(Method method, Map<Instruction, Set<String>> defSets,
-                                         Map<Instruction, Set<String>> useSets,
-                                         Map<Instruction, Set<String>> inSets,
-                                         Map<Instruction, Set<String>> outSets) {
-        // Initialize empty sets for all instructions
-        for (Instruction instruction : method.getInstructions()) {
-            inSets.put(instruction, new HashSet<>());
-            outSets.put(instruction, new HashSet<>());
+    private void performLiveness(List<Instruction> instrs, Map<Instruction, Set<String>> defSets, Map<Instruction, Set<String>> useSets, Map<Instruction, Set<String>> inSets, Map<Instruction, Set<String>> outSets) {
+        for (Instruction instr : instrs) {
+            inSets.put(instr, new HashSet<>());
+            outSets.put(instr, new HashSet<>());
         }
-
         boolean changed;
         do {
             changed = false;
-
-            // Iterate through instructions in reverse order (bottom-up)
-            List<Instruction> instructions = method.getInstructions();
-            for (int i = instructions.size() - 1; i >= 0; i--) {
-                Instruction instruction = instructions.get(i);
-
-                // Calculate new out set (union of all in sets of successors)
-                Set<String> newOutSet = new HashSet<>();
-                for (Node successor : instruction.getSuccessors()) {
-                    newOutSet.addAll(inSets.getOrDefault(successor, new HashSet<>()));
+            for (int i = instrs.size() - 1; i >= 0; i--) {
+                Instruction instr = instrs.get(i);
+                Set<String> newOut = new HashSet<>();
+                for (Node succ : instr.getSuccessors()) {
+                    if (succ instanceof Instruction)
+                        newOut.addAll(inSets.get((Instruction) succ));
                 }
-
-                // Calculate new in set (use + (out - def))
-                Set<String> newInSet = new HashSet<>(useSets.getOrDefault(instruction, new HashSet<>()));
-                Set<String> outMinusDef = new HashSet<>(newOutSet);
-                outMinusDef.removeAll(defSets.getOrDefault(instruction, new HashSet<>()));
-                newInSet.addAll(outMinusDef);
-
-                // Check if there were changes to in or out sets
-                if (!newOutSet.equals(outSets.get(instruction)) || !newInSet.equals(inSets.get(instruction))) {
+                Set<String> newIn = new HashSet<>(useSets.get(instr));
+                Set<String> temp = new HashSet<>(newOut);
+                temp.removeAll(defSets.get(instr));
+                newIn.addAll(temp);
+                if (!newOut.equals(outSets.get(instr)) || !newIn.equals(inSets.get(instr))) {
+                    outSets.put(instr, newOut);
+                    inSets.put(instr, newIn);
                     changed = true;
-                    outSets.put(instruction, newOutSet);
-                    inSets.put(instruction, newInSet);
                 }
             }
         } while (changed);
     }
 
-    private Map<String, Set<String>> buildInterferenceGraph(Method method,
-                                                            Map<Instruction, Set<String>> defSets,
-                                                            Map<Instruction, Set<String>> outSets) {
-        Map<String, Set<String>> interferenceGraph = new HashMap<>();
+    private Map<String, Set<String>> buildInterference(Map<Instruction, Set<String>> defSets, Map<Instruction, Set<String>> outSets, Method method, Map<String, Type> varTypes) {
 
-        // Initialize empty sets for all variables in the method
-        for (String varName : method.getVarTable().keySet()) {
-            interferenceGraph.put(varName, new HashSet<>());
+        Set<String> allVars = new HashSet<>();
+        for (Instruction instr : defSets.keySet()) {
+            allVars.addAll(defSets.get(instr));
+            allVars.addAll(outSets.get(instr));
         }
 
-        // For each instruction, variables in (def ∪ out) interfere with each other
-        for (Instruction instruction : method.getInstructions()) {
-            Set<String> defSet = defSets.getOrDefault(instruction, new HashSet<>());
-            Set<String> outSet = outSets.getOrDefault(instruction, new HashSet<>());
+        Map<String, Set<String>> graph = new HashMap<>();
+        for (String v : allVars) {
+            graph.putIfAbsent(v, new HashSet<>());
+        }
 
-            // Union of def and out sets
-            Set<String> interferingVars = new HashSet<>(defSet);
-            interferingVars.addAll(outSet);
-
-            // Add interferences between all pairs of variables in the set
-            List<String> varList = new ArrayList<>(interferingVars);
-            for (int i = 0; i < varList.size(); i++) {
-                for (int j = i + 1; j < varList.size(); j++) {
-                    String var1 = varList.get(i);
-                    String var2 = varList.get(j);
-
-                    // Skip if either variable should be excluded from interference
-                    if (shouldExcludeFromAllocation(var1, method) || shouldExcludeFromAllocation(var2, method)) {
-                        continue;
+        for (Instruction instr : defSets.keySet()) {
+            Set<String> live = new HashSet<>(outSets.get(instr));
+            live.addAll(defSets.get(instr));
+            for (String v1 : live) {
+                for (String v2 : live) {
+                    if (!v1.equals(v2)) {
+                        graph.get(v1).add(v2);
+                        graph.get(v2).add(v1);
                     }
-
-                    // Add edges to the interference graph
-                    interferenceGraph.computeIfAbsent(var1, k -> new HashSet<>()).add(var2);
-                    interferenceGraph.computeIfAbsent(var2, k -> new HashSet<>()).add(var1);
                 }
             }
         }
 
-        return interferenceGraph;
+        return graph;
     }
 
-    private boolean shouldExcludeFromAllocation(String varName, Method method) {
-        // Skip 'this' register
-        if (varName.equals("this")) {
-            return true;
-        }
+    private Map<String, Integer> colorGraph(Map<String, Set<String>> graph, Method method) {
+        Map<String, Integer> assign = new HashMap<>();
 
-        // Skip method parameters (they already have registers assigned)
-        Descriptor descriptor = method.getVarTable().get(varName);
-        if (descriptor != null && descriptor.getScope() == VarScope.PARAMETER) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private Map<String, Integer> colorGraph(Map<String, Set<String>> interferenceGraph, Method method) {
-        Map<String, Integer> colorAssignment = new HashMap<>();
-
-        // Exclude 'this' and parameters from coloring, keeping their original registers
-        for (Map.Entry<String, Descriptor> entry : method.getVarTable().entrySet()) {
+        // pin `this` and parameters
+        for (var entry : method.getVarTable().entrySet()) {
             String varName = entry.getKey();
             Descriptor descriptor = entry.getValue();
-
             if (varName.equals("this") || descriptor.getScope() == VarScope.PARAMETER) {
-                colorAssignment.put(varName, descriptor.getVirtualReg());
+                assign.put(varName, descriptor.getVirtualReg());
+            }
+        }
+        int pinnedCount = assign.size();
+
+        // build worklist
+        Map<String, Set<String>> work = new HashMap<>();
+        for (var entry : graph.entrySet()) {
+            if (!assign.containsKey(entry.getKey())) {
+                work.put(entry.getKey(), new HashSet<>(entry.getValue()));
             }
         }
 
-        // Make a copy of the graph for manipulation
-        Map<String, Set<String>> workingGraph = new HashMap<>();
-        for (Map.Entry<String, Set<String>> entry : interferenceGraph.entrySet()) {
-            if (!colorAssignment.containsKey(entry.getKey())) {
-                workingGraph.put(entry.getKey(), new HashSet<>(entry.getValue()));
-            }
-        }
-
-        // Stack to store removed nodes
-        Stack<String> removedNodes = new Stack<>();
-
-        // Remove nodes with degree < maxRegisters
-        while (!workingGraph.isEmpty()) {
-            String nodeToRemove = null;
-
-            // Try to find a node with degree < maxRegisters
-            for (String node : workingGraph.keySet()) {
-                if (workingGraph.get(node).size() < maxRegisters) {
-                    nodeToRemove = node;
+        // simplify
+        Deque<String> stack = new ArrayDeque<>();
+        while (!work.isEmpty()) {
+            String pick = null;
+            for (var entry : work.entrySet()) {
+                if (entry.getValue().size() < maxRegisters) {
+                    pick = entry.getKey();
                     break;
                 }
             }
-
-            // If no suitable node found, spill a node (choose the highest degree node)
-            if (nodeToRemove == null) {
-                int maxDegree = -1;
-
-                for (String node : workingGraph.keySet()) {
-                    if (workingGraph.get(node).size() > maxDegree) {
-                        maxDegree = workingGraph.get(node).size();
-                        nodeToRemove = node;
-                    }
-                }
+            if (pick == null) pick = work.keySet().iterator().next();
+            stack.push(pick);
+            for (String nbr : work.get(pick)) {
+                work.get(nbr).remove(pick);
             }
-
-            // Remove the selected node
-            if (nodeToRemove != null) {
-                // Add to stack
-                removedNodes.push(nodeToRemove);
-
-                // Remove from neighbors' adjacency lists
-                for (String neighbor : workingGraph.get(nodeToRemove)) {
-                    workingGraph.get(neighbor).remove(nodeToRemove);
-                }
-
-                // Remove from working graph
-                workingGraph.remove(nodeToRemove);
-            }
+            work.remove(pick);
         }
 
-        // Color the nodes
-        while (!removedNodes.isEmpty()) {
-            String node = removedNodes.pop();
-
-            // Get neighbors and their colors
-            Set<Integer> neighborColors = new HashSet<>();
-            for (String neighbor : interferenceGraph.getOrDefault(node, new HashSet<>())) {
-                if (colorAssignment.containsKey(neighbor)) {
-                    neighborColors.add(colorAssignment.get(neighbor));
-                }
+        // assign colors with offset
+        while (!stack.isEmpty()) {
+            String var = stack.pop();
+            Set<Integer> used = new HashSet<>();
+            for (String nbr : graph.getOrDefault(var, Set.of())) {
+                if (assign.containsKey(nbr)) used.add(assign.get(nbr));
             }
-
-            // Find the smallest available color (register)
-            int color = 0;
-            while (neighborColors.contains(color) && color < maxRegisters) {
+            int color = pinnedCount;
+            while (used.contains(color)) {
                 color++;
+                if (color >= pinnedCount + maxRegisters) break;
             }
-
-            // Assign color to node (if no color available, it will get maxRegisters-1)
-            colorAssignment.put(node, color < maxRegisters ? color : maxRegisters - 1);
+            assign.put(var, color);
         }
 
-        return colorAssignment;
+        return assign;
     }
 
-    private void updateRegisterAllocation(Method method, Map<String, Integer> colorAssignment) {
-        Map<String, Descriptor> varTable = method.getVarTable();
-
-        // Update register assignments
-        for (Map.Entry<String, Integer> entry : colorAssignment.entrySet()) {
-            String varName = entry.getKey();
-            int register = entry.getValue();
-
-            if (varTable.containsKey(varName)) {
-                varTable.get(varName).setVirtualReg(register);
+    private void updateVarTable(Method method, Map<String, Integer> coloring, Map<String, Type> varTypes) {
+        Map<String, Descriptor> vt = method.getVarTable();
+        for (var ent : coloring.entrySet()) {
+            String name = ent.getKey(); int reg = ent.getValue();
+            if (vt.containsKey(name)) {
+                vt.get(name).setVirtualReg(reg);
+            } else {
+                Descriptor d = new Descriptor(VarScope.LOCAL, reg, varTypes.get(name));
+                vt.put(name, d);
             }
         }
+    }
+
+    private void printRegisters(Method method, Map<String, Integer> coloring) {
+        int max = coloring.values().stream().max(Integer::compareTo).orElse(-1) + 1;
+        System.out.println("Register allocation for method `" + method.getMethodName() + "`: " + max + " registers are needed");
+        coloring.entrySet().stream().sorted(Map.Entry.comparingByValue()).forEach(e -> System.out.printf("Variable %s assigned to register #%d%n", e.getKey(), e.getValue()));
     }
 }
