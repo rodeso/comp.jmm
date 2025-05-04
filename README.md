@@ -64,3 +64,9 @@ The goal of this project is to develop a compiler for a simplified version of th
     and that is being correctly called
  - [ ] When calling methods that belong to other classes other than the class declared in the code, verify if the classes are being imported.
     – As explained in Section1.2, if a class is being imported, assume the types of the expression where it is used are correct. For instance, for the code bool a; a = M.foo();, if M is an imported class, then assume it has a method named foo without parameters that returns a boolean.
+
+
+### Optimizations Implemented
+- Constant Folding
+- Constant Propagation
+- Register Allocation
