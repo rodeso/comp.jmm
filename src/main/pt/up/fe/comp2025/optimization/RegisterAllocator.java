@@ -20,12 +20,31 @@ public class RegisterAllocator {
         ClassUnit classUnit = ollirResult.getOllirClass();
         classUnit.buildCFGs();
 
+        // Are we supposed to do anything in this case?
+        if (maxRegisters == -1) {
+            System.err.println("Error: -r option not set, register allocation skipped");
+            return;
+        }
+
         for (Method method : classUnit.getMethods()) {
             List<Instruction> instrs = method.getInstructions();
+
             if (instrs.isEmpty()) continue;
-            optimizeRegistersForMethod(method, instrs);
+
+            try {
+                optimizeRegistersForMethod(method, instrs);
+            } catch (InsufficientRegistersException e) {
+                if (maxRegisters > 0) {
+                    System.err.printf(
+                            "Error: method %s requires at least %d JVM locals, but -r=%d was given\n",
+                            method.getMethodName(), e.getRequired(), maxRegisters
+                    );
+                    System.exit(1);
+                }
+            }
         }
     }
+
 
     private void optimizeRegistersForMethod(Method method, List<Instruction> instrs) {
         Map<Instruction, Set<String>> defSets = new HashMap<>();
@@ -41,8 +60,16 @@ public class RegisterAllocator {
 
         Map<String, Integer> coloring = colorGraph(interference, method);
 
-        updateVarTable(method, coloring, varTypes);
+        int used = coloring.values().stream().max(Integer::compareTo).orElse(-1) + 1;
+        int pinned = (int) method.getVarTable().entrySet().stream()
+                .filter(e -> e.getKey().equals("this") || e.getValue().getScope() == VarScope.PARAMETER)
+                .count();
+        int newRegs = used - pinned;
+        if (newRegs > maxRegisters && maxRegisters > 0) {
+            throw new InsufficientRegistersException(newRegs);
+        }
 
+        updateVarTable(method, coloring, varTypes);
         printRegisters(method, coloring);
     }
 
@@ -186,7 +213,7 @@ public class RegisterAllocator {
         }
         int pinnedCount = assign.size();
 
-        // build worklist
+        // build worklist of others
         Map<String, Set<String>> work = new HashMap<>();
         for (var entry : graph.entrySet()) {
             if (!assign.containsKey(entry.getKey())) {
@@ -200,8 +227,7 @@ public class RegisterAllocator {
             String pick = null;
             for (var entry : work.entrySet()) {
                 if (entry.getValue().size() < maxRegisters) {
-                    pick = entry.getKey();
-                    break;
+                    pick = entry.getKey(); break;
                 }
             }
             if (pick == null) pick = work.keySet().iterator().next();
@@ -226,7 +252,6 @@ public class RegisterAllocator {
             }
             assign.put(var, color);
         }
-
         return assign;
     }
 
@@ -245,7 +270,14 @@ public class RegisterAllocator {
 
     private void printRegisters(Method method, Map<String, Integer> coloring) {
         int max = coloring.values().stream().max(Integer::compareTo).orElse(-1) + 1;
-        System.out.println("Register allocation for method `" + method.getMethodName() + "`: " + max + " registers are needed");
+        System.out.println("Register allocation for method " + method.getMethodName() + ": " + max + " registers are needed");
         coloring.entrySet().stream().sorted(Map.Entry.comparingByValue()).forEach(e -> System.out.printf("Variable %s assigned to register #%d%n", e.getKey(), e.getValue()));
+    }
+
+    // exception class
+    private static class InsufficientRegistersException extends RuntimeException {
+        private final int required;
+        public InsufficientRegistersException(int req) { this.required = req; }
+        public int getRequired() { return required; }
     }
 }
