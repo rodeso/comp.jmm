@@ -357,6 +357,36 @@ public class SemanticAnalysisTest {
         TestUtils.mustFail(result);
         System.out.println(result.getReports());
     }
+
+    @Test
+    public void staticNotMain() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/StaticNotMain.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void mainBadArguments() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/mainBadArguments.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void mainNotStatic() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/mainNotStatic.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void staticMainCorrect() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/staticMainCorrect.jmm"));
+        TestUtils.noErrors(result);
+    }
 // test for reference i don't think it's necessary
 //    @Test
 //    public void FieldReference() {

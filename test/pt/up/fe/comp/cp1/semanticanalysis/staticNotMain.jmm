@@ -1,0 +1,15 @@
+import A;
+class Returns {
+    int x;
+    A a;
+    public static void foo(String[] args){
+
+    }
+    public static void main(String[] args) {
+
+    }
+
+
+
+
+}

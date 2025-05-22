@@ -1,0 +1,11 @@
+import A;
+class Returns {
+
+    int main(int a) {
+        return a;
+    }
+
+
+
+
+}

@@ -53,8 +53,15 @@ public class MethodDeclaration extends AnalysisVisitor {
         if (expectedReturnType != null && expectedReturnType.getName().endsWith("...")) {
             addReport(newError(methodDecl, "Method '" + methodName + "' cannot return a varargs type."));
         }
-
+        if(methodDecl.hasAttribute("s") && !methodName.equals("main")){
+            addReport(newError(methodDecl, "Only main method can be static"));
+        }
         if(methodName.equals("main")) {
+            String argsType = methodDecl.getOptional("sArgs").orElse("");
+            if(!argsType.equals("String") && methodDecl.hasAttribute("s")){
+                addReport(newError(methodDecl, "Main method must have String as argument type"));
+            }
+
             return null;
         }
 

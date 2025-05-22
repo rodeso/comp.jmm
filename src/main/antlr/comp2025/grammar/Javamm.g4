@@ -7,7 +7,7 @@ grammar Javamm;
 CLASS : 'class' ;
 INT : 'int' ;
 BOOL : 'boolean' ;
-STRING : 'String';
+
 PUBLIC : 'public' ;
 RETURN : 'return' ;
 
@@ -49,7 +49,6 @@ type
 baseType
     : name=INT
     | name=BOOL
-    | name=STRING
     | name=INT args='...'
     | name=ID
     | name='void'
@@ -62,7 +61,7 @@ methodDecl locals[boolean isPublic=false]
         type name=ID
         '(' paramList? ')'
         '{' varDecl* stmt* '}'
-    | (PUBLIC {$isPublic=true;})? 'static' 'void' name='main' '(' STRING '[' ']' ID ')' '{' ( varDecl
+    | (PUBLIC {$isPublic=true;})? s='static' 'void' name=ID '(' sArgs=ID '[' ']' ID ')' '{' ( varDecl
        )* ( stmt )* '}'
     ;
 
@@ -92,14 +91,14 @@ expr
     : op= '(' expr op= ')' #PriorityExpr
     | op= '!' expr #UnaryExpr
     | expr '[' expr ']' #ArrayAccess
+    | expr '.' ID #LengthExpr
+    | expr '.' name=ID '(' ( expr ( ',' expr )* )? ')' #ClassFunctionExpr
     | expr op= ('*' | '/') expr #BinaryExpr
     | expr op= ('+' | '-') expr #BinaryExpr
     | expr op= '<' expr #BinaryExpr
     | expr op=('<=' | '==' | '!=' | '+=' | '-=' | '*=' | '/=') expr #BinaryExpr
     | expr op= '&&' expr #BinaryExpr
     | '[' (expr (',' expr)*)? ']' #ArrayLiteral
-    | expr '.' 'length' #LengthExpr
-    | expr '.' name=ID '(' ( expr ( ',' expr )* )? ')' #ClassFunctionExpr
     | expr 'new' expr 'int' expr '[' expr ']' #Label
     | 'new' type '[' expr ']' #ArrayCreation
     | 'new' name=ID '(' (expr (',' expr) *)?')' #New
