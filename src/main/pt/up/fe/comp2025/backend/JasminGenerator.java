@@ -1,9 +1,6 @@
 package pt.up.fe.comp2025.backend;
 
-import org.specs.comp.ollir.ClassUnit;
-import org.specs.comp.ollir.LiteralElement;
-import org.specs.comp.ollir.Method;
-import org.specs.comp.ollir.Operand;
+import org.specs.comp.ollir.*;
 import org.specs.comp.ollir.inst.*;
 import org.specs.comp.ollir.tree.TreeNode;
 import org.specs.comp.ollir.type.BuiltinType;
@@ -184,9 +181,16 @@ public class JasminGenerator {
 
         var methodName = method.getMethodName();
 
-        // TODO: Hardcoded param types and return type, needs to be expanded
-        var params = "I";
-        var returnType = "I";
+
+        var params = new StringBuilder();
+
+
+        for(Element param : currentMethod.getParams()){
+            params.append(types.getJasminType(param.getType()));
+        }
+
+
+        var returnType = types.getJasminType(currentMethod.getReturnType());
 
         code.append("\n.method ").append(modifier)
                 .append(methodName)
@@ -291,7 +295,16 @@ public class JasminGenerator {
         var code = new StringBuilder();
 
         // TODO: Hardcoded for int type, needs to be expanded
-        code.append("ireturn").append(NL);
+        String returnType =types.getJasminType(returnInst.getReturnType());
+        if(returnType.startsWith("[")){
+            returnType="areturn";
+        }
+        switch (returnType){
+            case "I" -> returnType="ireturn";
+            case "Z" -> returnType="ireturn";
+            case "V" -> returnType="return";
+        }
+        code.append(returnType).append(NL);
 
         return code.toString();
     }

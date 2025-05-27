@@ -35,7 +35,7 @@ public class JasminUtils {
         if( type instanceof BuiltinType){
             return getJasminBuiltInType((BuiltinType) type);
         } else if (type instanceof ArrayType) {
-            return getJasminType(type) + getJasminType(((ArrayType) type).getElementType());
+            return getJasminArrayType((ArrayType) type);
         } else if (type instanceof  ClassType) {
             return getJasminType(type);
         }
@@ -52,14 +52,14 @@ public class JasminUtils {
         return switch (type.getKind()){
             case  INT32 -> "I";
             case BOOLEAN -> "Z";
-            case STRING -> "Ljava/lang/String";
+            case STRING -> "Ljava/lang/String;";
             case VOID -> "V";
         };
 
     }
 
-    public String getJasminType(ArrayType type){
-        return "[".repeat(type.getNumDimensions()) ;
+    public String getJasminArrayType(ArrayType type){
+        return "[".repeat(type.getNumDimensions()) + getJasminType(((ArrayType) type).getElementType());
 
     }
 
