@@ -1,11 +1,11 @@
-import Other;
+import io;
 
-BasicMethods extends Other  {
-
-
+BasicExtends extends io  {
 
 
-.construct BasicMethods().V {
+
+
+.construct BasicExtends().V {
     invokespecial(this, "<init>").V;
 }
 

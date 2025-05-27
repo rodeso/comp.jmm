@@ -40,6 +40,10 @@ public class JasminGenerator {
 
     private int regLimit = 0;
 
+    private int maxStackLimit =0;
+
+    private int maxRegLimit=0;
+
     public JasminGenerator(OllirResult ollirResult) {
         this.ollirResult = ollirResult;
 
@@ -63,6 +67,15 @@ public class JasminGenerator {
 
     }
 
+    private void stackLimitIncrement(int value){
+        this.stackLimit=this.stackLimit+value;
+        this.maxStackLimit = Math.max(this.maxStackLimit,this.stackLimit);
+    }
+
+    private void regLimitIncrement(int value){
+        this.regLimit=this.regLimit+value;
+        this.maxRegLimit = Math.max(this.maxRegLimit,this.regLimit);
+    }
     private String apply(TreeNode node) {
         var code = new StringBuilder();
 
@@ -125,14 +138,18 @@ public class JasminGenerator {
         var className = ollirResult.getOllirClass().getClassName();
         code.append(".class ").append(className).append(NL).append(NL);
 
-        // TODO: When you support 'extends', this must be updated
+
         var imports = ollirResult.getOllirClass().getImports();
         var superClass = ollirResult.getOllirClass().getSuperClass();
         var fullSuperClass = "java/lang/Object";
-        for(String i : imports){
-            if(types.isInImport(superClass,i)){
-                fullSuperClass = i;
+        if(superClass!=null){
+
+            for(String i : imports){
+                if( types.isInImport(superClass,i)){
+                    fullSuperClass = i;
+                }
             }
+
         }
         code.append(".super ").append(fullSuperClass).append(NL);
 
@@ -173,6 +190,8 @@ public class JasminGenerator {
         //System.out.println("STARTING METHOD " + method.getMethodName());
         // set method
         currentMethod = method;
+        this.regLimit=0;
+        this.stackLimit=0;
 
         var code = new StringBuilder();
 
@@ -196,18 +215,21 @@ public class JasminGenerator {
                 .append(methodName)
                 .append("(" + params + ")" + returnType).append(NL);
 
-        // Add limits
-        code.append(TAB).append(".limit stack 99").append(NL);
-        code.append(TAB).append(".limit locals 99").append(NL);
 
+        StringBuilder methodBody = new StringBuilder();
         for (var inst : method.getInstructions()) {
             var instCode = StringLines.getLines(apply(inst)).stream()
                     .collect(Collectors.joining(NL + TAB, TAB, NL));
 
-            code.append(instCode);
+            methodBody.append(instCode);
         }
 
+        // Add limits
+        code.append(TAB).append(".limit stack ").append(this.stackLimit).append(NL);
+        code.append(TAB).append(".limit locals ").append(this.regLimit).append(NL);
+        code.append(methodBody);
         code.append(".end method\n");
+
 
         // unset method
         currentMethod = null;
