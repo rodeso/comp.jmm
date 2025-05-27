@@ -330,4 +330,9 @@ public class TypeUtils {
 
         return !isLocal && !isParam;
     }
+
+    public boolean isInImport(String name, String fullPath){
+        String[] parsedPath = fullPath.split("\\.");
+        return  name.equals(parsedPath[parsedPath.length-1]);
+    }
 }

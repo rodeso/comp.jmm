@@ -275,4 +275,9 @@ public class JasminTest {
         // Make sure the code compiles
         jasminResult.compile();
     }
+
+    @Test
+    public void basicExtends() {
+        CpUtils.runJasmin(getJasminResult("basic/BasicExtends.ollir"), "0");
+    }
 }

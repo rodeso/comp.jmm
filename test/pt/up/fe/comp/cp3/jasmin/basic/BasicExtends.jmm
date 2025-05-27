@@ -1,0 +1,9 @@
+import Other;
+
+class BasicMethods extends Other {
+
+    public int func4(){
+        return 1;
+    }
+
+}

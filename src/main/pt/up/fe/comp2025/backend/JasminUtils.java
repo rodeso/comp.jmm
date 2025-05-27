@@ -24,4 +24,44 @@ public class JasminUtils {
                 accessModifier.name().toLowerCase() + " " :
                 "";
     }
+
+    public boolean isInImport(String name, String fullPath){
+
+        String[] parsedPath = fullPath.split("\\.");
+        return  name.equals(parsedPath[parsedPath.length-1]);
+    }
+
+    public String getJasminType(Type type){
+        if( type instanceof BuiltinType){
+            return getJasminBuiltInType((BuiltinType) type);
+        } else if (type instanceof ArrayType) {
+            return getJasminType(type) + getJasminType(((ArrayType) type).getElementType());
+        } else if (type instanceof  ClassType) {
+            return getJasminType(type);
+        }
+
+        return "";
+
+    }
+    public String getJasminType(ClassType type){
+        return "";
+
+    }
+
+    private String getJasminBuiltInType(BuiltinType type){
+        return switch (type.getKind()){
+            case  INT32 -> "I";
+            case BOOLEAN -> "Z";
+            case STRING -> "Ljava/lang/String";
+            case VOID -> "V";
+        };
+
+    }
+
+    public String getJasminType(ArrayType type){
+        return "[".repeat(type.getNumDimensions()) ;
+
+    }
+
+
 }

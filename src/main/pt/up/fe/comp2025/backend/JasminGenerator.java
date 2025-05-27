@@ -4,11 +4,9 @@ import org.specs.comp.ollir.ClassUnit;
 import org.specs.comp.ollir.LiteralElement;
 import org.specs.comp.ollir.Method;
 import org.specs.comp.ollir.Operand;
-import org.specs.comp.ollir.inst.AssignInstruction;
-import org.specs.comp.ollir.inst.BinaryOpInstruction;
-import org.specs.comp.ollir.inst.ReturnInstruction;
-import org.specs.comp.ollir.inst.SingleOpInstruction;
+import org.specs.comp.ollir.inst.*;
 import org.specs.comp.ollir.tree.TreeNode;
+import org.specs.comp.ollir.type.BuiltinType;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.specs.util.classmap.FunctionClassMap;
@@ -41,6 +39,10 @@ public class JasminGenerator {
 
     private final FunctionClassMap<TreeNode, String> generators;
 
+    private int stackLimit = 0;
+
+    private int regLimit = 0;
+
     public JasminGenerator(OllirResult ollirResult) {
         this.ollirResult = ollirResult;
 
@@ -59,6 +61,9 @@ public class JasminGenerator {
         generators.put(Operand.class, this::generateOperand);
         generators.put(BinaryOpInstruction.class, this::generateBinaryOp);
         generators.put(ReturnInstruction.class, this::generateReturn);
+        generators.put(PutFieldInstruction.class, this::generatePutInst);
+        generators.put(GetFieldInstruction.class,this::generateGetInst);
+
     }
 
     private String apply(TreeNode node) {
@@ -87,6 +92,33 @@ public class JasminGenerator {
         return code;
     }
 
+    private String generatePutInst(PutFieldInstruction putFieldInstruction){
+        StringBuilder code = new StringBuilder();
+
+        var className = ollirResult.getOllirClass().getClassName();
+        code.append("aload_0").append(NL);
+        code.append(generators.apply(putFieldInstruction.getValue()));
+
+        var field = putFieldInstruction.getField();
+        code.append("putfield ").append(className).append("/").append(field.getName()).append(" ")
+                .append(types.getJasminType(field.getType())).append(NL);
+        return code.toString();
+    }
+
+    private String generateGetInst(GetFieldInstruction getFieldInstruction){
+        StringBuilder code = new StringBuilder();
+
+        var className = ollirResult.getOllirClass().getClassName();
+        code.append("aload_0").append(NL);
+
+        var field = getFieldInstruction.getField();
+        code.append("getfield ").append(className).append("/").append(field.getName()).append(" ")
+                .append(types.getJasminType(field.getType())).append(NL);
+        //code.append(store()); create func to store
+        return code.toString();
+    }
+
+
 
     private String generateClassUnit(ClassUnit classUnit) {
 
@@ -97,10 +129,21 @@ public class JasminGenerator {
         code.append(".class ").append(className).append(NL).append(NL);
 
         // TODO: When you support 'extends', this must be updated
+        var imports = ollirResult.getOllirClass().getImports();
+        var superClass = ollirResult.getOllirClass().getSuperClass();
         var fullSuperClass = "java/lang/Object";
-
+        for(String i : imports){
+            if(types.isInImport(superClass,i)){
+                fullSuperClass = i;
+            }
+        }
         code.append(".super ").append(fullSuperClass).append(NL);
 
+        var fields = ollirResult.getOllirClass().getFields();
+
+        for(var field : fields){
+            code.append(".field public '").append(field.getFieldName()).append("' ").append(types.getJasminType(field.getFieldType())).append(NL);
+        }
         // generate a single constructor method
         var defaultConstructor = """
                 ;default constructor
@@ -198,6 +241,19 @@ public class JasminGenerator {
     }
 
     private String generateLiteral(LiteralElement literal) {
+        var type = literal.getType();
+        if(types.getJasminType(type).equals("I")){
+            var literalValue = Integer.parseInt(literal.getLiteral());
+            if(literalValue >=0 && literalValue <=5){
+                return "iconst_"+literal.getLiteral()+NL;
+            }
+            if(literalValue >=-128 && literalValue<=127){
+                return "bipush "+literal.getLiteral()+NL;
+            }
+            if(literalValue >= -256 && literalValue<=255){
+                return "sipush "+literal.getLiteral()+NL;
+            }
+        }
         return "ldc " + literal.getLiteral() + NL;
     }
 
