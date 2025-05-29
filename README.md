@@ -3,7 +3,7 @@
 Yet Another JMM Compiler
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-- **Project name:** AED1G135 - Yet Another JMM Compiler (YAJMMC)
+- **Project name:** COMP9C - Yet Another JMM Compiler (YAJMMC)
 - **Short description:** Compiler for a simplified version of the Java Minus Minus (JMM) language
 - **Environment:** Unix/Windows console
 - **Tools:** Java, ANTLR, JASMIN, Gradle
