@@ -45,6 +45,8 @@ public class OptimizationsTest {
         return CpUtils.getOllirResult(SpecsIo.getResource(BASE_PATH + filename), config, true);
     }
 
+
+
     @Test
     public void regAllocSimple() {
 
@@ -180,6 +182,16 @@ public class OptimizationsTest {
 
         var method = CpUtils.getMethod(optimized, "main");
         CpUtils.assertFindLiteral("15", method, optimized);
+    }
+
+    @Test
+    public void extraConstPropLoop() {
+
+        String filename = "extra/const_prop_loop.jmm";
+
+        var original = getOllirResult(filename);
+
+        System.out.println(original.getOllirCode());
     }
 
 }
