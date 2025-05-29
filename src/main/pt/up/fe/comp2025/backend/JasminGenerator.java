@@ -64,6 +64,7 @@ public class JasminGenerator {
         generators.put(ReturnInstruction.class, this::generateReturn);
         generators.put(PutFieldInstruction.class, this::generatePutInst);
         generators.put(GetFieldInstruction.class,this::generateGetInst);
+        generators.put(NewInstruction.class, this::generateNewInstruction);
 
     }
 
@@ -335,6 +336,20 @@ public class JasminGenerator {
             case "V" -> returnType="return";
         }
         code.append(returnType).append(NL);
+
+        return code.toString();
+    }
+
+    private String generateNewInstruction(NewInstruction newInstruction) {
+        var code = new StringBuilder();
+
+        // Get the class name to instantiate
+        var className = newInstruction.getClass().getName().toString();
+
+        // Generate Jasmin code for object creation
+        code.append("new ").append(className).append(NL);
+        code.append("dup").append(NL);
+        code.append("invokespecial ").append(className).append("/<init>()V").append(NL);
 
         return code.toString();
     }
