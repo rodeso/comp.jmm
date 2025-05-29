@@ -286,25 +286,29 @@ public class JasminGenerator {
     private String generateOperand(Operand operand) {
         // get register
         var reg = currentMethod.getVarTable().get(operand.getName());
+        String prefix = types.getPrefix(types.getJasminType(operand.getType()));
 
-        // TODO: Hardcoded for int type, needs to be expanded
-        return "iload " + reg.getVirtualReg() + NL;
+
+        return prefix +"load " + reg.getVirtualReg() + NL;
     }
 
     private String generateBinaryOp(BinaryOpInstruction binaryOp) {
         var code = new StringBuilder();
 
         // load values on the left and on the right
+
         code.append(apply(binaryOp.getLeftOperand()));
         code.append(apply(binaryOp.getRightOperand()));
 
         // TODO: Hardcoded for int type, needs to be expanded
+
         var typePrefix = "i";
 
         // apply operation
         var op = switch (binaryOp.getOperation().getOpType()) {
             case ADD -> "add";
             case MUL -> "mul";
+
             default -> throw new NotImplementedException(binaryOp.getOperation().getOpType());
         };
 
@@ -315,15 +319,19 @@ public class JasminGenerator {
 
     private String generateReturn(ReturnInstruction returnInst) {
         var code = new StringBuilder();
-
+        var operand = returnInst.getOperand().orElse(null);
         // TODO: Hardcoded for int type, needs to be expanded
         String returnType =types.getJasminType(returnInst.getReturnType());
         if(returnType.startsWith("[")){
+
+            code.append(apply(operand));
             returnType="areturn";
         }
         switch (returnType){
-            case "I" -> returnType="ireturn";
-            case "Z" -> returnType="ireturn";
+            case "I", "Z" ->{
+                code.append(apply(operand));
+                returnType="ireturn";
+            }
             case "V" -> returnType="return";
         }
         code.append(returnType).append(NL);

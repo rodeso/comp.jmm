@@ -63,5 +63,16 @@ public class JasminUtils {
 
     }
 
+    public String getPrefix(String type){
+        if(type.startsWith("[")){
+            return "a";
+        }
+
+        return switch (type){
+            case "I","Z" -> "i";
+            default -> throw new NotImplementedException(type);
+        };
+    }
+
 
 }
