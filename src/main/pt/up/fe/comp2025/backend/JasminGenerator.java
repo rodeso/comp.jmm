@@ -268,8 +268,15 @@ public class JasminGenerator {
 
     private String generateLiteral(LiteralElement literal) {
         var type = literal.getType();
+        if(types.getJasminType(type).equals("Z")){
+
+            return "iconst_"+literal.getLiteral()+NL;
+        }
         if(types.getJasminType(type).equals("I")){
             var literalValue = Integer.parseInt(literal.getLiteral());
+            if(literalValue == -1){
+                return "iconst_m1"+NL;
+            }
             if(literalValue >=0 && literalValue <=5){
                 return "iconst_"+literal.getLiteral()+NL;
             }
