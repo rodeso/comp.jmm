@@ -13,6 +13,8 @@ public class JasminUtils {
 
     private final OllirResult ollirResult;
 
+    private int tagForIf_icmplt = -1;
+
     public JasminUtils(OllirResult ollirResult) {
         // Can be useful to have if you expand this class with more methods
         this.ollirResult = ollirResult;
@@ -37,14 +39,14 @@ public class JasminUtils {
         } else if (type instanceof ArrayType) {
             return getJasminArrayType((ArrayType) type);
         } else if (type instanceof  ClassType) {
-            return getJasminType(type);
+            return getJasminClassType((ClassType) type);
         }
 
         return "";
 
     }
-    public String getJasminType(ClassType type){
-        return "";
+    public String getJasminClassType(ClassType type){
+        return "L"+type.getName();
 
     }
 
@@ -64,7 +66,7 @@ public class JasminUtils {
     }
 
     public String getPrefix(String type){
-        if(type.startsWith("[")){
+        if(type.startsWith("[") || type.startsWith("L")){
             return "a";
         }
 
@@ -72,6 +74,11 @@ public class JasminUtils {
             case "I","Z" -> "i";
             default -> throw new NotImplementedException(type);
         };
+    }
+
+    public int getTagForIf_icmplt(){
+        this.tagForIf_icmplt +=1;
+        return this.tagForIf_icmplt;
     }
 
 

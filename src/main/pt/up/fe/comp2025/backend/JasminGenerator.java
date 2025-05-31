@@ -65,6 +65,7 @@ public class JasminGenerator {
         generators.put(PutFieldInstruction.class, this::generatePutInst);
         generators.put(GetFieldInstruction.class,this::generateGetInst);
         generators.put(NewInstruction.class, this::generateNewInstruction);
+        generators.put(OpCondInstruction.class,this::generateOpCondInst);
 
     }
 
@@ -74,8 +75,16 @@ public class JasminGenerator {
     }
 
     private void regLimitIncrement(int value){
-        this.regLimit=this.regLimit+value;
+        this.regLimit=value+1;
         this.maxRegLimit = Math.max(this.maxRegLimit,this.regLimit);
+    }
+
+    private String generateStores(String type, int regNum){
+        this.regLimitIncrement(regNum);
+        if(regNum>=0 && regNum <=3){
+            return type+"store_"+regNum;
+        }
+        return  type+"store "+regNum;
     }
     private String apply(TreeNode node) {
         var code = new StringBuilder();
@@ -105,7 +114,7 @@ public class JasminGenerator {
 
     private String generatePutInst(PutFieldInstruction putFieldInstruction){
         StringBuilder code = new StringBuilder();
-
+        this.stackLimitIncrement(1);
         var className = ollirResult.getOllirClass().getClassName();
         code.append("aload_0").append(NL);
         code.append(generators.apply(putFieldInstruction.getValue()));
@@ -113,6 +122,8 @@ public class JasminGenerator {
         var field = putFieldInstruction.getField();
         code.append("putfield ").append(className).append("/").append(field.getName()).append(" ")
                 .append(types.getJasminType(field.getType())).append(NL);
+
+        this.stackLimitIncrement(-2);
         return code.toString();
     }
 
@@ -129,6 +140,14 @@ public class JasminGenerator {
         return code.toString();
     }
 
+
+    private String generateOpCondInst(OpCondInstruction opCondInstruction){
+        StringBuilder code = new StringBuilder();
+
+        code.append(apply(opCondInstruction.getCondition()));
+
+        return  code.toString();
+    }
 
 
     private String generateClassUnit(ClassUnit classUnit) {
@@ -158,6 +177,7 @@ public class JasminGenerator {
 
         for(var field : fields){
             code.append(".field public '").append(field.getFieldName()).append("' ").append(types.getJasminType(field.getFieldType())).append(NL);
+
         }
         // generate a single constructor method
         var defaultConstructor = """
@@ -193,11 +213,15 @@ public class JasminGenerator {
         currentMethod = method;
         this.regLimit=0;
         this.stackLimit=0;
+        this.maxStackLimit=0;
+        this.maxRegLimit=0;
 
         var code = new StringBuilder();
 
         // calculate modifier
         var modifier = types.getModifier(method.getMethodAccessModifier());
+
+        var staticMethod = method.isStaticMethod();
 
         var methodName = method.getMethodName();
 
@@ -207,14 +231,27 @@ public class JasminGenerator {
 
         for(Element param : currentMethod.getParams()){
             params.append(types.getJasminType(param.getType()));
+
+
         }
+
+        this.regLimitIncrement(currentMethod.getParams().size()-1);
 
 
         var returnType = types.getJasminType(currentMethod.getReturnType());
 
-        code.append("\n.method ").append(modifier)
-                .append(methodName)
+        code.append("\n.method ").append(modifier);
+
+        if(staticMethod){
+            code.append("static ");
+        }
+
+        code.append(methodName)
                 .append("(" + params + ")" + returnType).append(NL);
+
+        if(!staticMethod){
+            this.regLimitIncrement(0);
+        }
 
 
         StringBuilder methodBody = new StringBuilder();
@@ -226,8 +263,8 @@ public class JasminGenerator {
         }
 
         // Add limits
-        code.append(TAB).append(".limit stack ").append(this.stackLimit).append(NL);
-        code.append(TAB).append(".limit locals ").append(this.regLimit).append(NL);
+        code.append(TAB).append(".limit stack ").append(this.maxStackLimit).append(NL);
+        code.append(TAB).append(".limit locals ").append(this.maxRegLimit).append(NL);
         code.append(methodBody);
         code.append(".end method\n");
 
@@ -256,9 +293,11 @@ public class JasminGenerator {
         // get register
         var reg = currentMethod.getVarTable().get(operand.getName());
 
+        var type = types.getJasminType(operand.getType());
+        var prefix = types.getPrefix(type);
 
-        // TODO: Hardcoded for int type, needs to be expanded
-        code.append("istore ").append(reg.getVirtualReg()).append(NL);
+
+        code.append(generateStores(prefix,reg.getVirtualReg())).append(NL);
 
         return code.toString();
     }
@@ -268,6 +307,7 @@ public class JasminGenerator {
     }
 
     private String generateLiteral(LiteralElement literal) {
+        this.stackLimitIncrement(1);
         var type = literal.getType();
         if(types.getJasminType(type).equals("Z")){
 
@@ -284,7 +324,7 @@ public class JasminGenerator {
             if(literalValue >=-128 && literalValue<=127){
                 return "bipush "+literal.getLiteral()+NL;
             }
-            if(literalValue >= -256 && literalValue<=255){
+            if(literalValue >= -32768 && literalValue<=32767){
                 return "sipush "+literal.getLiteral()+NL;
             }
         }
@@ -296,7 +336,9 @@ public class JasminGenerator {
         var reg = currentMethod.getVarTable().get(operand.getName());
         String prefix = types.getPrefix(types.getJasminType(operand.getType()));
 
-
+        if(reg.getVirtualReg()>=0 && reg.getVirtualReg()<=3){
+            return prefix+"load_"+reg.getVirtualReg()+NL;
+        }
         return prefix +"load " + reg.getVirtualReg() + NL;
     }
 
@@ -313,9 +355,21 @@ public class JasminGenerator {
         var typePrefix = "i";
 
         // apply operation
+        if(binaryOp.getOperation().getOpType() == OperationType.LTH){
+            this.stackLimitIncrement(-2);
+            int tagNum = types.getTagForIf_icmplt();
+            code.append("if_icmplt ").append("j_true_").append(tagNum).append(NL)
+                    .append("iconst_0").append(NL).append("goto ").append("j_end").append(tagNum).append(NL)
+                    .append("j_true_").append(tagNum).append(":").append(NL)
+                    .append("iconst_1").append(NL)
+                    .append("j_end").append(tagNum).append(":").append(NL);
+            return code.toString();
+        }
         var op = switch (binaryOp.getOperation().getOpType()) {
             case ADD -> "add";
             case MUL -> "mul";
+            case SUB -> "sub";
+            case DIV -> "div";
 
             default -> throw new NotImplementedException(binaryOp.getOperation().getOpType());
         };

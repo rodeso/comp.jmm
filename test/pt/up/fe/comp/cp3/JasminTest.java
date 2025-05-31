@@ -51,7 +51,7 @@ public class JasminTest {
         var ollirResult = new OllirResult(SpecsIo.getResource(resource), Collections.emptyMap());
 
         var result = TestUtils.backend(ollirResult);
-
+        System.out.println(result.getJasminCode());
         ProjectTestUtils.runJasmin(result, null);
     }
 
