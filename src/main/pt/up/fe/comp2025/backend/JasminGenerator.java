@@ -278,7 +278,7 @@ public class JasminGenerator {
             this.regLimitIncrement(0);
         }
 
-
+        this.regLimitIncrement(method.getParams().size());
         StringBuilder methodBody = new StringBuilder();
         for (var inst : method.getInstructions()) {
             var labels = method.getLabels(inst);
@@ -459,7 +459,7 @@ public class JasminGenerator {
 
         // Get the class name to instantiate
 
-        //var className = newInstruction
+        
         var returnType = newInstruction.getReturnType();
         if(returnType instanceof ArrayType){
             for(var arg : newInstruction.getArguments()){
