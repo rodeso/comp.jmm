@@ -137,7 +137,7 @@ public class JasminGenerator {
 
         var className = ollirResult.getOllirClass().getClassName();
         code.append("aload_0").append(NL);
-
+        this.stackLimitIncrement(1);
         var field = getFieldInstruction.getField();
         code.append("getfield ").append(className).append("/").append(field.getName()).append(" ")
                 .append(types.getJasminType(field.getType())).append(NL);
@@ -150,7 +150,7 @@ public class JasminGenerator {
 
         code.append(apply(unaryOpInstruction.getOperand()))
                 .append("iconst_1").append(NL).append("ixor").append(NL);
-
+        this.stackLimitIncrement(1); // for const
         this.stackLimitIncrement(-1);
 
         return code.toString();
@@ -339,10 +339,10 @@ public class JasminGenerator {
     }
     private String generateSingleOpCondInst(SingleOpCondInstruction singleOpCondInstruction){
         StringBuilder code = new StringBuilder();
-        this.stackLimitIncrement(-1);
+
         code.append(apply(singleOpCondInstruction.getCondition()));
         code.append("ifne ").append(singleOpCondInstruction.getLabel());
-
+        this.stackLimitIncrement(-1);
         return code.toString();
     }
 
@@ -386,7 +386,7 @@ public class JasminGenerator {
         var code = new StringBuilder();
 
         // load values on the left and on the right
-        this.stackLimitIncrement(-2);
+
 
 
 
@@ -397,6 +397,7 @@ public class JasminGenerator {
 
         var typePrefix = "i";
 
+        this.stackLimitIncrement(-1);
         // apply operation
         if(binaryOp.getOperation().getOpType() == OperationType.LTH){
 
@@ -479,7 +480,7 @@ public class JasminGenerator {
         var returnType =types.getJasminType(invokeStaticInstruction.getReturnType());
         code.append(")").append(returnType);
 
-        this.stackLimitIncrement(invokeStaticInstruction.getArguments().size());
+        this.stackLimitIncrement(-invokeStaticInstruction.getArguments().size());
         if(!returnType.equals("V")){
             this.stackLimitIncrement(1);
         }
