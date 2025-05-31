@@ -55,7 +55,7 @@ The goal of this project is to develop a compiler for a simplified version of th
  - [ ] “this” can be used as an “object” (e.g. A a; a = this; is correct if the declared class is A or the declared class extends A)
  - [ ] A vararg type when used, must always be the type of the last parameter in a method declaration. Also, only one parameter can be vararg, but the method can have several parameters
  - [ ] Variable declarations, field declarations and method returns cannot be vararg
- - [ ] Array initializer (e.g., [1, 2, 3]) can be used in all places (i.e., expressions) that can accept an array of integers
+ - [ ] Array initializer (e.g., [1, 2, 3] ) can be used in all places (i.e., expressions) that can accept an array of integers
 #### Method Verification
  - [ ] When calling methods of the class declared in the code, verify if the types of arguments of the call are compatible with the types in the method declaration
  - [ ] If the calling method accepts varargs, it can accept both a variable number of arguments of the same type as an array, or directly an array
