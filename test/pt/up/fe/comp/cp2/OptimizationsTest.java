@@ -45,6 +45,8 @@ public class OptimizationsTest {
         return CpUtils.getOllirResult(SpecsIo.getResource(BASE_PATH + filename), config, true);
     }
 
+
+
     @Test
     public void regAllocSimple() {
 
@@ -180,6 +182,26 @@ public class OptimizationsTest {
 
         var method = CpUtils.getMethod(optimized, "main");
         CpUtils.assertFindLiteral("15", method, optimized);
+    }
+
+    @Test
+    public void extraConstPropLoop() {
+
+        String filename = "extra/const_prop_loop.jmm";
+
+        var original = getOllirResult(filename);
+        var optimized = getOllirResultOpt(filename);
+
+
+        CpUtils.assertTrue("Expected code to change with -o flag\n\nOriginal code:\n" + original.getOllirCode(),
+                !original.getOllirCode().equals(optimized.getOllirCode()), optimized);
+
+        var method = CpUtils.getMethod(optimized, "main");
+        CpUtils.assertFindLiteral("10", method, optimized);
+        CpUtils.assertFindLiteral("20", method, optimized);
+        CpUtils.assertFindLiteral("40", method, optimized);
+
+        System.out.println(optimized.getOllirCode());
     }
 
 }
