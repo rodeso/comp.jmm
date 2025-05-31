@@ -74,6 +74,7 @@ public class JasminGenerator {
         generators.put(UnaryOpInstruction.class,this::generateUnaryInst);
         generators.put(InvokeStaticInstruction.class,this::generateInvokeStatic);
         generators.put(InvokeSpecialInstruction.class,this::generateInvokeSpecialInst);
+        generators.put(InvokeVirtualInstruction.class,this::generateInvokeVirtual);
 
     }
 
@@ -434,7 +435,7 @@ public class JasminGenerator {
         var operand = returnInst.getOperand().orElse(null);
         // TODO: Hardcoded for int type, needs to be expanded
         String returnType =types.getJasminType(returnInst.getReturnType());
-        if(returnType.startsWith("[")){
+        if(returnType.startsWith("[") || returnType.startsWith("L")){
 
             code.append(apply(operand));
             returnType="areturn";
@@ -474,7 +475,7 @@ public class JasminGenerator {
         var className = ((ClassType) returnType).getName();
         code.append("new ").append(className).append(NL);
 
-        
+
         this.stackLimitIncrement(1);
         return code.toString();
     }
@@ -494,7 +495,7 @@ public class JasminGenerator {
         }
 
         var returnType =types.getJasminType(invokeStaticInstruction.getReturnType());
-        code.append(")").append(returnType);
+        code.append(")").append(returnType).append(NL);
 
         this.stackLimitIncrement(-invokeStaticInstruction.getArguments().size());
         if(!returnType.equals("V")){
@@ -536,6 +537,37 @@ public class JasminGenerator {
         if(!returnType.equals("V")){
             this.stackLimitIncrement(1);
         }
+
+        return code.toString();
+    }
+
+    private String generateInvokeVirtual(InvokeVirtualInstruction invokeVirtualInstruction){
+        StringBuilder code = new StringBuilder();
+
+        var caller = ((Operand) invokeVirtualInstruction.getCaller());
+
+        code.append(apply(caller));
+
+        for(var arg : invokeVirtualInstruction.getArguments()){
+            code.append(apply(arg));
+        }
+
+        code.append("invokevirtual ").append(((ClassType)invokeVirtualInstruction.getCaller().getType()).getName())
+                .append("/").append(((LiteralElement)invokeVirtualInstruction.getMethodName()).getLiteral()).append("(");
+
+        for(var argsType : invokeVirtualInstruction.getArguments()){
+            code.append(types.getJasminType(argsType.getType()));
+        }
+
+        var returnType =types.getJasminType(invokeVirtualInstruction.getReturnType());
+        code.append(")").append(returnType).append(NL);
+
+        this.stackLimitIncrement(-invokeVirtualInstruction.getArguments().size());
+        if(!returnType.equals("V")){
+            this.stackLimitIncrement(1);
+        }
+
+
 
         return code.toString();
     }
