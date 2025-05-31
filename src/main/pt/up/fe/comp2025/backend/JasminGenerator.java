@@ -68,6 +68,8 @@ public class JasminGenerator {
         generators.put(OpCondInstruction.class,this::generateOpCondInst);
         generators.put(SingleOpCondInstruction.class, this::generateSingleOpCondInst);
         generators.put(GotoInstruction.class,this::generateGoto);
+        generators.put(UnaryOpInstruction.class,this::generateUnaryInst);
+        generators.put(InvokeStaticInstruction.class,this::generateInvokeStatic);
 
     }
 
@@ -143,11 +145,26 @@ public class JasminGenerator {
         return code.toString();
     }
 
+    private String generateUnaryInst(UnaryOpInstruction unaryOpInstruction){
+        StringBuilder code = new StringBuilder();
+
+        code.append(apply(unaryOpInstruction.getOperand()))
+                .append("iconst_1").append(NL).append("ixor").append(NL);
+
+        this.stackLimitIncrement(-1);
+
+        return code.toString();
+    }
+
 
     private String generateOpCondInst(OpCondInstruction opCondInstruction){
         StringBuilder code = new StringBuilder();
 
         code.append(apply(opCondInstruction.getCondition()));
+
+        code.append("ifne ").append(opCondInstruction.getLabel());
+
+        this.stackLimitIncrement(-1);
 
         return  code.toString();
     }
@@ -442,6 +459,30 @@ public class JasminGenerator {
         code.append("dup").append(NL);
         code.append("invokespecial ").append(className).append("/<init>()V").append(NL);
 
+        return code.toString();
+    }
+
+    private String generateInvokeStatic(InvokeStaticInstruction invokeStaticInstruction){
+        StringBuilder code = new StringBuilder();
+
+        for(var args : invokeStaticInstruction.getArguments()){
+            code.append(apply(args));
+        }
+
+        code.append("invokestatic ").append(((Operand)invokeStaticInstruction.getCaller()).getName())
+                .append("/").append(((LiteralElement)invokeStaticInstruction.getMethodName()).getLiteral()).append("(");
+
+        for(var argsType : invokeStaticInstruction.getArguments()){
+            code.append(types.getJasminType(argsType.getType()));
+        }
+
+        var returnType =types.getJasminType(invokeStaticInstruction.getReturnType());
+        code.append(")").append(returnType);
+
+        this.stackLimitIncrement(invokeStaticInstruction.getArguments().size());
+        if(!returnType.equals("V")){
+            this.stackLimitIncrement(1);
+        }
         return code.toString();
     }
 }
