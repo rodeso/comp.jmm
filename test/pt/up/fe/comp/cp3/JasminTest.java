@@ -87,6 +87,7 @@ public class JasminTest {
     @Test
     public void section1_Basic_Method_Declaration_Array() {
         JasminResult jasminResult = getJasminResult("basic/BasicMethodsArray.ollir");
+        System.out.println(jasminResult.getJasminCode());
         CpUtils.matches(jasminResult, JASMIN_METHOD_REGEX_PREFIX + "\\[I");
     }
 
@@ -284,5 +285,10 @@ public class JasminTest {
     @Test
     public void And() {
         CpUtils.runJasmin(getJasminResult("basic/And.ollir"), "");
+    }
+
+    @Test
+    public void NewObject() {
+        CpUtils.runJasmin(getJasminResult("basic/NewObject.ollir"), "");
     }
 }

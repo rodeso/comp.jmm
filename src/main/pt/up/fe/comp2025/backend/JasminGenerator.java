@@ -3,13 +3,16 @@ package pt.up.fe.comp2025.backend;
 import org.specs.comp.ollir.*;
 import org.specs.comp.ollir.inst.*;
 import org.specs.comp.ollir.tree.TreeNode;
+import org.specs.comp.ollir.type.ArrayType;
 import org.specs.comp.ollir.type.BuiltinType;
+import org.specs.comp.ollir.type.ClassType;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.specs.util.classmap.FunctionClassMap;
 import pt.up.fe.specs.util.exceptions.NotImplementedException;
 import pt.up.fe.specs.util.utilities.StringLines;
 
+import java.lang.annotation.ElementType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -454,13 +457,25 @@ public class JasminGenerator {
         var code = new StringBuilder();
 
         // Get the class name to instantiate
-        var className = ollirResult.getOllirClass().getClassName();
+
+        //var className = newInstruction
+        var returnType = newInstruction.getReturnType();
+        if(returnType instanceof ArrayType){
+            for(var arg : newInstruction.getArguments()){
+                code.append(apply(arg));
+            }
+            code.append("newarray int").append(NL);
+            this.stackLimitIncrement(-1);
+            this.stackLimitIncrement(1);
+            return code.toString();
+        }
 
         // Generate Jasmin code for object creation
+        var className = ((ClassType) returnType).getName();
         code.append("new ").append(className).append(NL);
-        code.append("dup").append(NL);
-        code.append("invokespecial ").append(className).append("/<init>()V").append(NL);
 
+        
+        this.stackLimitIncrement(1);
         return code.toString();
     }
 
@@ -491,13 +506,15 @@ public class JasminGenerator {
 
     private String generateInvokeSpecialInst(InvokeSpecialInstruction invokeSpecialInstruction) {
         StringBuilder code = new StringBuilder();
-
+        Operand caller = (Operand) invokeSpecialInstruction.getCaller();
+        ClassType type = (ClassType) caller.getType();
+        var reg = currentMethod.getVarTable().get(caller.getName()).getVirtualReg();
         // Load the object reference
-        code.append("aload_").append('0').append(NL);
+        code.append("aload_").append(reg).append(NL);
 
         // Get method and class details
-        var methodName = invokeSpecialInstruction.getMethodName();
-        var className = ollirResult.getOllirClass().getClassName();
+
+        var className = type.getName() ;
         var arguments = invokeSpecialInstruction.getArguments();
 
         // Load arguments
@@ -513,7 +530,12 @@ public class JasminGenerator {
             code.append(types.getJasminType(arg.getType()));
         }
 
-        code.append(")").append(types.getJasminType(invokeSpecialInstruction.getReturnType())).append(NL);
+        var returnType = types.getJasminType(invokeSpecialInstruction.getReturnType());
+        code.append(")").append(returnType).append(NL);
+        this.stackLimitIncrement(-invokeSpecialInstruction.getArguments().size());
+        if(!returnType.equals("V")){
+            this.stackLimitIncrement(1);
+        }
 
         return code.toString();
     }
