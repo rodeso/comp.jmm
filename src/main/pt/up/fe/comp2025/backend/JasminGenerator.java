@@ -70,6 +70,7 @@ public class JasminGenerator {
         generators.put(GotoInstruction.class,this::generateGoto);
         generators.put(UnaryOpInstruction.class,this::generateUnaryInst);
         generators.put(InvokeStaticInstruction.class,this::generateInvokeStatic);
+        generators.put(InvokeSpecialInstruction.class,this::generateInvokeSpecialInst);
 
     }
 
@@ -452,7 +453,7 @@ public class JasminGenerator {
         var code = new StringBuilder();
 
         // Get the class name to instantiate
-        var className = newInstruction.getClass().getName().toString();
+        var className = ollirResult.getOllirClass().getClassName();
 
         // Generate Jasmin code for object creation
         code.append("new ").append(className).append(NL);
@@ -483,6 +484,36 @@ public class JasminGenerator {
         if(!returnType.equals("V")){
             this.stackLimitIncrement(1);
         }
+        return code.toString();
+    }
+
+
+    private String generateInvokeSpecialInst(InvokeSpecialInstruction invokeSpecialInstruction) {
+        StringBuilder code = new StringBuilder();
+
+        // Load the object reference
+        code.append("aload_").append('0').append(NL);
+
+        // Get method and class details
+        var methodName = invokeSpecialInstruction.getMethodName();
+        var className = ollirResult.getOllirClass().getClassName();
+        var arguments = invokeSpecialInstruction.getArguments();
+
+        // Load arguments
+        for (var arg : arguments) {
+            code.append(apply(arg));
+        }
+
+        // Generate invokespecial instruction
+        code.append("invokespecial ").append(className).append("/")
+                .append(((LiteralElement)invokeSpecialInstruction.getMethodName()).getLiteral()).append("(");
+
+        for (var arg : arguments) {
+            code.append(types.getJasminType(arg.getType()));
+        }
+
+        code.append(")").append(types.getJasminType(invokeSpecialInstruction.getReturnType())).append(NL);
+
         return code.toString();
     }
 }
