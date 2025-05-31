@@ -66,6 +66,8 @@ public class JasminGenerator {
         generators.put(GetFieldInstruction.class,this::generateGetInst);
         generators.put(NewInstruction.class, this::generateNewInstruction);
         generators.put(OpCondInstruction.class,this::generateOpCondInst);
+        generators.put(SingleOpCondInstruction.class, this::generateSingleOpCondInst);
+        generators.put(GotoInstruction.class,this::generateGoto);
 
     }
 
@@ -81,6 +83,7 @@ public class JasminGenerator {
 
     private String generateStores(String type, int regNum){
         this.regLimitIncrement(regNum);
+        this.stackLimitIncrement(-1);
         if(regNum>=0 && regNum <=3){
             return type+"store_"+regNum;
         }
@@ -256,6 +259,11 @@ public class JasminGenerator {
 
         StringBuilder methodBody = new StringBuilder();
         for (var inst : method.getInstructions()) {
+            var labels = method.getLabels(inst);
+
+            for(var label : labels){
+                methodBody.append(label).append(":\n");
+            }
             var instCode = StringLines.getLines(apply(inst)).stream()
                     .collect(Collectors.joining(NL + TAB, TAB, NL));
 
@@ -306,6 +314,21 @@ public class JasminGenerator {
         return apply(singleOp.getSingleOperand());
     }
 
+    private String generateGoto(GotoInstruction gotoInstruction){
+        StringBuilder code = new StringBuilder();
+        code.append("goto ").append(gotoInstruction.getLabel()).append(NL);
+
+        return code.toString();
+    }
+    private String generateSingleOpCondInst(SingleOpCondInstruction singleOpCondInstruction){
+        StringBuilder code = new StringBuilder();
+        this.stackLimitIncrement(-1);
+        code.append(apply(singleOpCondInstruction.getCondition()));
+        code.append("ifne ").append(singleOpCondInstruction.getLabel());
+
+        return code.toString();
+    }
+
     private String generateLiteral(LiteralElement literal) {
         this.stackLimitIncrement(1);
         var type = literal.getType();
@@ -335,7 +358,7 @@ public class JasminGenerator {
         // get register
         var reg = currentMethod.getVarTable().get(operand.getName());
         String prefix = types.getPrefix(types.getJasminType(operand.getType()));
-
+        this.stackLimitIncrement(1);
         if(reg.getVirtualReg()>=0 && reg.getVirtualReg()<=3){
             return prefix+"load_"+reg.getVirtualReg()+NL;
         }
@@ -346,6 +369,9 @@ public class JasminGenerator {
         var code = new StringBuilder();
 
         // load values on the left and on the right
+        this.stackLimitIncrement(-2);
+
+
 
         code.append(apply(binaryOp.getLeftOperand()));
         code.append(apply(binaryOp.getRightOperand()));
@@ -356,7 +382,7 @@ public class JasminGenerator {
 
         // apply operation
         if(binaryOp.getOperation().getOpType() == OperationType.LTH){
-            this.stackLimitIncrement(-2);
+
             int tagNum = types.getTagForIf_icmplt();
             code.append("if_icmplt ").append("j_true_").append(tagNum).append(NL)
                     .append("iconst_0").append(NL).append("goto ").append("j_end").append(tagNum).append(NL)
@@ -365,6 +391,8 @@ public class JasminGenerator {
                     .append("j_end").append(tagNum).append(":").append(NL);
             return code.toString();
         }
+
+
         var op = switch (binaryOp.getOperation().getOpType()) {
             case ADD -> "add";
             case MUL -> "mul";
@@ -397,6 +425,8 @@ public class JasminGenerator {
             case "V" -> returnType="return";
         }
         code.append(returnType).append(NL);
+
+        this.stackLimitIncrement(-1);
 
         return code.toString();
     }

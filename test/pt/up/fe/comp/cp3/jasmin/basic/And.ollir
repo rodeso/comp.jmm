@@ -1,0 +1,26 @@
+import ioPlus;
+
+SimpleControlFlow {
+
+
+
+
+.construct SimpleControlFlow().V {
+    invokespecial(this, "<init>").V;
+}
+
+.method public static main(args.array.String).V {
+a.bool :=.bool 1.bool;
+if (a.bool) goto then0;
+andTmp0.bool :=.bool 0.bool;
+goto endif0;
+then0:
+
+andTmp0.bool :=.bool 1.bool;
+endif0:
+c.bool :=.bool andTmp0.bool;
+
+   ret.V ;
+}
+
+}

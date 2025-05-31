@@ -14,6 +14,7 @@ public class JasminUtils {
     private final OllirResult ollirResult;
 
     private int tagForIf_icmplt = -1;
+    private int thenTag = -1;
 
     public JasminUtils(OllirResult ollirResult) {
         // Can be useful to have if you expand this class with more methods
@@ -79,6 +80,11 @@ public class JasminUtils {
     public int getTagForIf_icmplt(){
         this.tagForIf_icmplt +=1;
         return this.tagForIf_icmplt;
+    }
+
+    public int getThenTag(){
+        this.thenTag +=1;
+        return this.thenTag;
     }
 
 

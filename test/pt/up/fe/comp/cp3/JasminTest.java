@@ -278,6 +278,11 @@ public class JasminTest {
 
     @Test
     public void basicExtends() {
-        CpUtils.runJasmin(getJasminResult("basic/BasicExtends.ollir"), "0");
+        CpUtils.runJasmin(getJasminResult("basic/BasicExtends.ollir"), "");
+    }
+
+    @Test
+    public void And() {
+        CpUtils.runJasmin(getJasminResult("basic/And.ollir"), "");
     }
 }
