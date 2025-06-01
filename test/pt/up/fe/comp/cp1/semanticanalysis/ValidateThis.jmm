@@ -1,0 +1,13 @@
+class VarargsWrong {
+
+    public static void main(String[] args) {
+        boolean a;
+        boolean b;
+        b = false;
+        a = this.varargs(b);
+    }
+
+    public boolean varargs(boolean b) {
+        return b;
+    }
+}

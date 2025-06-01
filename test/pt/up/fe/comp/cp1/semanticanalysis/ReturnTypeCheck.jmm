@@ -1,0 +1,15 @@
+class ReturnTypeCheck {
+    public static void main(String[] args) {
+        return 1;
+    }
+
+    public void okVoid() {
+    }
+
+    public int missingReturn() {
+    }
+
+    public boolean wrongType() {
+        return 1;
+    }
+} 
