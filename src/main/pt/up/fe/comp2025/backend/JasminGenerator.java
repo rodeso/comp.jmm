@@ -76,6 +76,7 @@ public class JasminGenerator {
         generators.put(InvokeSpecialInstruction.class,this::generateInvokeSpecialInst);
         generators.put(InvokeVirtualInstruction.class,this::generateInvokeVirtual);
         generators.put(ArrayLengthInstruction.class,this::generateArrayLength);
+        generators.put(ArrayOperand.class, this::generateArrayLoad);
 
     }
 
@@ -312,27 +313,65 @@ public class JasminGenerator {
 
     private String generateAssign(AssignInstruction assign) {
         var code = new StringBuilder();
-
-        // generate code for loading what's on the right
-        code.append(apply(assign.getRhs()));
-
-        // store value in the stack in destination
         var lhs = assign.getDest();
 
-        if (!(lhs instanceof Operand)) {
-            throw new NotImplementedException(lhs.getClass());
+        if (lhs instanceof ArrayOperand) {
+            ArrayOperand arrayOperand = (ArrayOperand) lhs;
+
+
+            var arrayVarDescriptor = currentMethod.getVarTable().get(arrayOperand.getName());
+            if (arrayVarDescriptor == null) {
+                throw new RuntimeException("Array variable " + arrayOperand.getName() + " not found in VarTable for instruction: " + assign);
+            }
+
+            int arrayReg = arrayVarDescriptor.getVirtualReg();
+
+            this.regLimitIncrement(arrayReg);
+
+            this.stackLimitIncrement(1);
+            String arrayLoadInstruction;
+            if (arrayReg >= 0 && arrayReg <= 3) {
+                arrayLoadInstruction = "aload_" + arrayReg;
+            } else {
+                arrayLoadInstruction = "aload " + arrayReg;
+            }
+            code.append(arrayLoadInstruction).append(NL);
+
+            code.append(apply(arrayOperand.getIndexOperands().get(0))); // Index is an Element
+
+            code.append(apply(assign.getRhs())); // RHS is an Element
+
+            org.specs.comp.ollir.type.Type elementType = arrayOperand.getType();
+            String jasminElementType = types.getJasminType(elementType);
+
+            // Based on the element type, choose the correct store instruction
+            if (jasminElementType.equals("I") || jasminElementType.equals("Z")) { // Integer or Boolean
+                code.append("iastore").append(NL);
+            } else { // Object references (including other arrays or custom objects)
+                code.append("aastore").append(NL);
+            }
+
+            this.stackLimitIncrement(-3);
+
+        } else if (lhs instanceof Operand) {
+
+            code.append(apply(assign.getRhs()));
+
+            Operand operand = (Operand) lhs;
+            var varDescriptor = currentMethod.getVarTable().get(operand.getName());
+            if (varDescriptor == null) {
+                 throw new RuntimeException("Variable " + operand.getName() + " not found in VarTable for instruction: " + assign);
+            }
+            int regNum = varDescriptor.getVirtualReg();
+
+            var jasminType = types.getJasminType(operand.getType());
+            var prefix = types.getPrefix(jasminType); // 'i' for int, 'a' for ref, etc.
+
+            code.append(generateStores(prefix, regNum)).append(NL);
+
+        } else {
+            throw new NotImplementedException("Unsupported LHS for assignment: " + lhs.getClass().getName() + " in instruction: " + assign);
         }
-
-        var operand = (Operand) lhs;
-
-        // get register
-        var reg = currentMethod.getVarTable().get(operand.getName());
-
-        var type = types.getJasminType(operand.getType());
-        var prefix = types.getPrefix(type);
-
-
-        code.append(generateStores(prefix,reg.getVirtualReg())).append(NL);
 
         return code.toString();
     }
@@ -427,7 +466,7 @@ public class JasminGenerator {
         if(binaryOp.getOperation().getOpType() == OperationType.GTE){
             String ifInst ="if_icmpge";
 
-            
+
             int tagNum = types.getTagForIf_icmplt();
             code.append(ifInst).append(" ").append("j_true_").append(tagNum).append(NL)
                     .append("iconst_0").append(NL).append("goto ").append("j_end").append(tagNum).append(NL)
@@ -605,6 +644,49 @@ public class JasminGenerator {
         code.append(apply(caller));
 
         code.append("arraylength").append(NL);
+        // arraylength consumes 1 (arrayref), pushes 1 (length). Net 0.
+        // apply(caller) already incremented stack by 1 for arrayref.
+        // So no net change to stack height needed here after arraylength itself.
+
+        return code.toString();
+    }
+
+    private String generateArrayLoad(ArrayOperand arrayOperand) {
+        StringBuilder code = new StringBuilder();
+
+        // 1. Load array reference onto the stack
+        var arrayVarDescriptor = currentMethod.getVarTable().get(arrayOperand.getName());
+        if (arrayVarDescriptor == null) {
+            throw new RuntimeException("Array variable \"" + arrayOperand.getName() + "\" not found in VarTable for loading element from: " + arrayOperand);
+        }
+        int arrayReg = arrayVarDescriptor.getVirtualReg();
+        this.regLimitIncrement(arrayReg); // Ensure reg is considered for .limit locals
+
+        this.stackLimitIncrement(1);      // Array reference pushed to stack (aload)
+        if (arrayReg >= 0 && arrayReg <= 3) {
+            code.append("aload_").append(arrayReg).append(NL);
+        } else {
+            code.append("aload ").append(arrayReg).append(NL);
+        }
+
+        // 2. Load index onto the stack
+        // apply() on the index Element will handle its loading and stack increment
+        code.append(apply(arrayOperand.getIndexOperands().get(0)));
+
+        // 3. Perform array load instruction (iaload or aaload)
+        // arrayOperand.getType() gives the Type of the element being loaded.
+        org.specs.comp.ollir.type.Type elementType = arrayOperand.getType();
+        String jasminElementType = types.getJasminType(elementType);
+
+        // iaload/aaload consumes arrayref and index from stack (-2 from current height),
+        // then pushes the element (+1). Net effect on stack height: -1.
+        this.stackLimitIncrement(-1); 
+
+        if (jasminElementType.equals("I") || jasminElementType.equals("Z")) { // Integer or Boolean
+            code.append("iaload").append(NL);
+        } else { // Object references
+            code.append("aaload").append(NL);
+        }
 
         return code.toString();
     }
