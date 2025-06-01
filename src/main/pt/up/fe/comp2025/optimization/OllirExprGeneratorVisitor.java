@@ -204,25 +204,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
 
 
 
-    public OllirExprResult visitForceTemp(JmmNode node, String type) {
-        var computation = new StringBuilder();
-        String register = ollirTypes.nextTemp();
-        var nodeComp = visit(node);
 
-        computation.append(nodeComp.getComputation());
-
-        final Pattern pattern = Pattern.compile("(.*)(\\.[a-z0-9A-Z]*)");
-        var matcher = pattern.matcher(nodeComp.getRef());
-        if (!matcher.find()) {
-            return nodeComp;
-        }
-        var returnedRegister = matcher.group(1);
-
-        computation.append(String.format("%s%s :=%s %s%s;", register, type, type, returnedRegister, type)).append("\n");
-
-        return new OllirExprResult(register + type, computation);
-
-    }
 
 
 
@@ -423,11 +405,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
             if (node.hasAttribute("type")) {
                 returnType = node.getObject("type", Type.class);
             } else {
-                System.err.println(
-                        "Warning: Return type for method '" +
-                                funcName +
-                                "' not found. Assuming void or placeholder."
-                );
+
                 returnType = new Type("void", false);
             }
         }

@@ -74,6 +74,6 @@ The goal of this project is to develop a compiler for a simplified version of th
 
 ### Contributions
 
-Rafael Campeão 40%
-Rodrigo de Sousa 35%
+Rafael Campeão 40%  
+Rodrigo de Sousa 35%  
 André de Sousa 25%
