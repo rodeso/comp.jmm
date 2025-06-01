@@ -1,0 +1,7 @@
+import A;
+import A;
+
+class DuplicateImports {
+    public static void main(String[] args) {
+    }
+} 
