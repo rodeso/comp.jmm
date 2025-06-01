@@ -144,12 +144,16 @@ public class JasminTest {
     /*checks if the code of a simple WHILE statement is well executed */
     @Test
     public void section3_ControlFlow_While_Simple() {
+        var jasminResult = getJasminResult("control_flow/SimpleWhileStat.ollir");
+        System.out.println(jasminResult.getJasminCode());
         CpUtils.runJasmin(getJasminResult("control_flow/SimpleWhileStat.ollir"), "Result: 0\nResult: 1\nResult: 2");
     }
 
     /*checks if the code of a more complex IF ELSE statement (similar a switch statement) is well executed */
     @Test
     public void section3_ControlFlow_Mixed_Switch() {
+        var jasminResult = getJasminResult("control_flow/SwitchStat.ollir");
+        System.out.println(jasminResult.getJasminCode());
         CpUtils.runJasmin(getJasminResult("control_flow/SwitchStat.ollir"),
                 "Result: 1\nResult: 2\nResult: 3\nResult: 4\nResult: 5\nResult: 6\nResult: 7");
     }
@@ -300,5 +304,12 @@ public class JasminTest {
         var jasminResult = getJasminResult("basic/ReturnObject.ollir");
         System.out.println(jasminResult.getJasminCode());
         CpUtils.runJasmin(getJasminResult("basic/ReturnObject.ollir"), "");
+    }
+
+    @Test
+    public void NewObjImported() {
+        var jasminResult = getJasminResult("basic/NewObjImported.ollir");
+        System.out.println(jasminResult.getJasminCode());
+
     }
 }

@@ -427,7 +427,7 @@ public class JasminGenerator {
         if(binaryOp.getOperation().getOpType() == OperationType.GTE){
             String ifInst ="if_icmpge";
 
-            
+
             int tagNum = types.getTagForIf_icmplt();
             code.append(ifInst).append(" ").append("j_true_").append(tagNum).append(NL)
                     .append("iconst_0").append(NL).append("goto ").append("j_end").append(tagNum).append(NL)
@@ -511,7 +511,16 @@ public class JasminGenerator {
             code.append(apply(args));
         }
 
-        code.append("invokestatic ").append(((Operand)invokeStaticInstruction.getCaller()).getName())
+        var className = ((Operand)invokeStaticInstruction.getCaller()).getName();
+
+        for(var imp : ollirResult.getOllirClass().getImports()){
+            String[] path = imp.split("\\.");
+            if(path.length>0 && className.equals(path[path.length-1])){
+                className = imp.replace(".","/");
+            }
+        }
+
+        code.append("invokestatic ").append(className)
                 .append("/").append(((LiteralElement)invokeStaticInstruction.getMethodName()).getLiteral()).append("(");
 
         for(var argsType : invokeStaticInstruction.getArguments()){
@@ -547,6 +556,13 @@ public class JasminGenerator {
             code.append(apply(arg));
         }
 
+        for(var imp : ollirResult.getOllirClass().getImports()){
+            String[] path = imp.split("\\.");
+            if(path.length>0 && className.equals(path[path.length-1])){
+                className = imp.replace(".","/");
+            }
+        }
+
         // Generate invokespecial instruction
         code.append("invokespecial ").append(className).append("/")
                 .append(((LiteralElement)invokeSpecialInstruction.getMethodName()).getLiteral()).append("(");
@@ -576,7 +592,16 @@ public class JasminGenerator {
             code.append(apply(arg));
         }
 
-        code.append("invokevirtual ").append(((ClassType)invokeVirtualInstruction.getCaller().getType()).getName())
+        var className = ((ClassType)invokeVirtualInstruction.getCaller().getType()).getName();
+
+        for(var imp : ollirResult.getOllirClass().getImports()){
+            String[] path = imp.split("\\.");
+            if(path.length>0 && className.equals(path[path.length-1])){
+                className = imp.replace(".","/");
+            }
+        }
+
+        code.append("invokevirtual ").append(className)
                 .append("/").append(((LiteralElement)invokeVirtualInstruction.getMethodName()).getLiteral()).append("(");
 
         for(var argsType : invokeVirtualInstruction.getArguments()){

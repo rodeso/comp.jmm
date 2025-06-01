@@ -31,6 +31,9 @@ public class JasminUtils {
     public boolean isInImport(String name, String fullPath){
 
         String[] parsedPath = fullPath.split("\\.");
+        if(parsedPath.length==0){
+            return false;
+        }
         return  name.equals(parsedPath[parsedPath.length-1]);
     }
 
