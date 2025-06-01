@@ -119,8 +119,7 @@ public class JasminGenerator {
         // This way, build is idempotent
         if (code == null) {
             code = apply(ollirResult.getOllirClass());
-            // Peephole optimization for iinc: replace iload, iconst_1, iadd, istore, iload, istore patterns
-            //code = optimizeIinc(code);
+
         }
 
         return code;
@@ -130,24 +129,7 @@ public class JasminGenerator {
      * Peephole optimization to replace increment patterns with iinc instruction.
      * Looks for sequences: iload_N, iconst_1, iadd, istore_T, iload_T, istore_N -> iinc N 1
      */
-    private String optimizeIinc(String code) {
-        var sb = new StringBuffer();
-        // Regex pattern matching the six-instruction sequence with optional leading whitespace
-        String patternStr = "(?m)^[ \\t]*iload_(\\d+)[ \\t]*\\r?\\n" +
-                            "[ \\t]*iconst_1[ \\t]*\\r?\\n" +
-                            "[ \\t]*iadd[ \\t]*\\r?\\n" +
-                            "[ \\t]*istore_(\\d+)[ \\t]*\\r?\\n" +
-                            "[ \\t]*iload_\\2[ \\t]*\\r?\\n" +
-                            "[ \\t]*istore_\\1";
-        var pattern = java.util.regex.Pattern.compile(patternStr);
-        var matcher = pattern.matcher(code);
-        while (matcher.find()) {
-            String reg = matcher.group(1); // the original variable register
-            matcher.appendReplacement(sb, "iinc " + reg + " 1");
-        }
-        matcher.appendTail(sb);
-        return sb.toString();
-    }
+
 
     private String generatePutInst(PutFieldInstruction putFieldInstruction){
         StringBuilder code = new StringBuilder();
@@ -594,7 +576,7 @@ public class JasminGenerator {
     private String generateReturn(ReturnInstruction returnInst) {
         var code = new StringBuilder();
         var operand = returnInst.getOperand().orElse(null);
-        // TODO: Hardcoded for int type, needs to be expanded
+
         String returnType =types.getJasminType(returnInst.getReturnType());
         if(returnType.startsWith("[") || returnType.startsWith("L")){
 
@@ -620,7 +602,7 @@ public class JasminGenerator {
     private String generateNewInstruction(NewInstruction newInstruction) {
         var code = new StringBuilder();
 
-        // Get the class name to instantiate
+
 
 
         var returnType = newInstruction.getReturnType();
@@ -779,7 +761,7 @@ public class JasminGenerator {
     private String generateArrayLoad(ArrayOperand arrayOperand) {
         StringBuilder code = new StringBuilder();
 
-        // 1. Load array reference onto the stack
+        // Load array reference onto the stack
         var arrayVarDescriptor = currentMethod.getVarTable().get(arrayOperand.getName());
         if (arrayVarDescriptor == null) {
             throw new RuntimeException("Array variable \"" + arrayOperand.getName() + "\" not found in VarTable for loading element from: " + arrayOperand);
@@ -794,12 +776,10 @@ public class JasminGenerator {
             code.append("aload ").append(arrayReg).append(NL);
         }
 
-        // 2. Load index onto the stack
-        // apply() on the index Element will handle its loading and stack increment
+        // Load index onto the stack
         code.append(apply(arrayOperand.getIndexOperands().get(0)));
 
-        // 3. Perform array load instruction (iaload or aaload)
-        // arrayOperand.getType() gives the Type of the element being loaded.
+        // Perform array load instruction (iaload or aaload)
         org.specs.comp.ollir.type.Type elementType = arrayOperand.getType();
         String jasminElementType = types.getJasminType(elementType);
 

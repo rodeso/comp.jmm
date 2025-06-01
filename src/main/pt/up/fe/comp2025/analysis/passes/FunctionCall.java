@@ -49,7 +49,7 @@ public class FunctionCall extends AnalysisVisitor {
         boolean methodExists = table.getMethods().contains(funcName);
         boolean isSuperCall = false;
         if (!methodExists && table.getSuper() != null && !table.getSuper().isEmpty()) {
-            System.out.println("Assuming method '" + funcName + "' exists in superclass '" + table.getSuper() + "'.");
+
             isSuperCall = true;
         } else if (!methodExists) {
             addReport(newError(funcCall, "Method '" + funcName + "' not declared in class '" + table.getClassName() + "' or its known superclasses."));

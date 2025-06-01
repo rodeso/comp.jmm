@@ -96,7 +96,7 @@ public class MethodDeclaration extends AnalysisVisitor {
             }
 
             if (actualReturnType.getName().equals("imported_or_unknown")) {
-                System.out.println("Skipping return type check for expression resulting in unknown/imported type in " + methodName);
+
                 continue; // Assume que está correto se não conseguimos determinar o tipo real
             }
 

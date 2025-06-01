@@ -1,6 +1,12 @@
 class A {
-    private int b;
-    getB() {
-        return this.b;
+    int b;
+    public int getB() {
+        return b;
     }
+
+
+    public int func(){
+        return this.getB();
+    }
+
 }
