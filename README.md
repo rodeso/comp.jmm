@@ -17,6 +17,8 @@ Yet Another JMM Compiler
 
 ## Table of Contents
 - [Project Description](#project-description)
+- [Optimizations Implemented](#optimizations-implemented)
+- [Contributions](#contributions)
 
 ## Project Description
 The goal of this project is to develop a compiler for a simplified version of the Java Minus Minus (JMM) language. The compiler will be developed in Java and will use ANTLR to generate the parser and lexer. The compiler will generate Java bytecode using the JASMIN assembler.
