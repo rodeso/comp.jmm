@@ -41,7 +41,12 @@ public class JmmAnalysisImpl implements JmmAnalysis {
             new VarDeclaration(),
             new LengthProperty(),
             new ThisCheck(),
-            new ReturnTypeCheck()
+            new ReturnTypeCheck(),
+            new ImportCheck(),
+            new DeadCodeCheck(),
+            new VoidTypeCheck(),
+            new StringArrayCheck(),
+            new VarargsVarDeclCheck()
         );
     }
 

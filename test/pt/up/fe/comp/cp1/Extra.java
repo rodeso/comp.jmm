@@ -35,4 +35,39 @@ public class Extra {
         System.out.println(result.getReports());
     }
 
+    @Test
+    public void duplicateImportsCheck() {
+        var result = TestUtils.analyse(
+            SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/DuplicateImports.jmm")
+        );
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void deadCodeAfterReturnCheck() {
+        var result = TestUtils.analyse(
+            SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/DeadCodeAfterReturn.jmm")
+        );
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+    @Test
+    public void stringArrayCheck() {
+        var result = TestUtils.analyse(
+            SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/StringArray.jmm")
+        );
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void varargsVarDeclCheck() {
+        var result = TestUtils.analyse(
+            SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarargsVarDecl.jmm")
+        );
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
 }
