@@ -120,7 +120,7 @@ public class JasminGenerator {
         if (code == null) {
             code = apply(ollirResult.getOllirClass());
             // Peephole optimization for iinc: replace iload, iconst_1, iadd, istore, iload, istore patterns
-            code = optimizeIinc(code);
+            //code = optimizeIinc(code);
         }
 
         return code;
@@ -335,62 +335,63 @@ public class JasminGenerator {
         //System.out.println("ENDING METHOD " + method.getMethodName());
         return code.toString();
     }
+    private boolean isIinc(AssignInstruction assignInstruction){
+        var rhsInst = assignInstruction.getRhs();
+        if(!( rhsInst instanceof BinaryOpInstruction)){
+            return false;
+        }
+        if(!(((BinaryOpInstruction) rhsInst).getOperation().getOpType().equals(OperationType.ADD)
+                || ((BinaryOpInstruction) rhsInst).getOperation().getOpType().equals(OperationType.SUB))){
+            return false;
+        }
+        Operand lhs = (Operand) assignInstruction.getDest();
+        String lhsName = lhs.getName();
 
-    private String generateAssign(AssignInstruction assign) {
-        var code = new StringBuilder();
-        var lhs = assign.getDest();
+        boolean operationLeftIsLiteral = ((BinaryOpInstruction) rhsInst).getLeftOperand().isLiteral();
+        boolean operationRightIsLiteral = ((BinaryOpInstruction) rhsInst).getRightOperand().isLiteral();
 
-        if (lhs instanceof Operand && assign.getRhs() instanceof BinaryOpInstruction) {
-            Operand destOperand = (Operand) lhs;
-            BinaryOpInstruction binaryOp = (BinaryOpInstruction) assign.getRhs();
+        if(operationLeftIsLiteral){
+            LiteralElement opLeft = (LiteralElement) ((BinaryOpInstruction) rhsInst).getLeftOperand();
 
-            // Check if destination is an integer and operation is ADD
-            if (types.getJasminType(destOperand.getType()).equals("I") &&
-                binaryOp.getOperation().getOpType() == OperationType.ADD) {
+            int literalVal = Integer.parseInt(opLeft.getLiteral());
+            if(literalVal >127 || literalVal<-128 || operationRightIsLiteral){
+                return false;
+            }
 
-                Operand varOpInBinary = null;
-                LiteralElement constLiteralInBinary = null;
-
-                Element leftOfBinary = binaryOp.getLeftOperand();
-                Element rightOfBinary = binaryOp.getRightOperand();
-
-                if (leftOfBinary instanceof Operand && ((Operand) leftOfBinary).getName().equals(destOperand.getName()) &&
-                    rightOfBinary instanceof LiteralElement && types.getJasminType(rightOfBinary.getType()).equals("I")) {
-                    varOpInBinary = (Operand) leftOfBinary; // This is destOperand
-                    constLiteralInBinary = (LiteralElement) rightOfBinary;
-                }
-                else if (rightOfBinary instanceof Operand && ((Operand) rightOfBinary).getName().equals(destOperand.getName()) &&
-                         leftOfBinary instanceof LiteralElement && types.getJasminType(leftOfBinary.getType()).equals("I")) {
-                    varOpInBinary = (Operand) rightOfBinary; // This is destOperand
-                    constLiteralInBinary = (LiteralElement) leftOfBinary;
-                }
-
-                if (varOpInBinary != null && constLiteralInBinary != null) {
-                    try {
-                        int incrementValue = Integer.parseInt(constLiteralInBinary.getLiteral());
-                        if (incrementValue != 0 && incrementValue >= -128 && incrementValue <= 127) {
-                            var varDescriptor = currentMethod.getVarTable().get(destOperand.getName());
-                            if (varDescriptor != null) {
-                                int regNum = varDescriptor.getVirtualReg();
-                                this.regLimitIncrement(regNum);
-
-                                code.append("iinc ").append(regNum).append(" ").append(incrementValue).append(NL);
-                                return code.toString();
-                            }
-                        }
-                    } catch (NumberFormatException e) {
-                    }
-                }
+            Operand opRight = (Operand) ((BinaryOpInstruction) rhsInst).getRightOperand();
+            if(!opRight.getName().equals(lhsName)){
+                return false;
             }
         }
 
-        if (lhs instanceof ArrayOperand) {
-            ArrayOperand arrayOperand = (ArrayOperand) lhs;
+        if(operationRightIsLiteral){
+            LiteralElement opRight = (LiteralElement) ((BinaryOpInstruction) rhsInst).getRightOperand();
 
-            var arrayVarDescriptor = currentMethod.getVarTable().get(arrayOperand.getName());
-            if (arrayVarDescriptor == null) {
-                throw new RuntimeException("Array variable " + arrayOperand.getName() + " not found in VarTable for instruction: " + assign);
+            int literalVal = Integer.parseInt(opRight.getLiteral());
+            if(literalVal >127 || literalVal<-128 || operationLeftIsLiteral){
+                return false;
             }
+
+            Operand opLeft = (Operand) ((BinaryOpInstruction) rhsInst).getLeftOperand();
+            if(!opLeft.getName().equals(lhsName)){
+                return false;
+            }
+        }
+        return (operationLeftIsLiteral ^ operationRightIsLiteral);
+    }
+
+    private String generateAssign(AssignInstruction assign) {
+        var code = new StringBuilder();
+
+
+
+        // store value in the stack in destination
+        var lhs = assign.getDest();
+
+        if( lhs instanceof ArrayOperand){
+            ArrayOperand arrayOperand = (ArrayOperand) lhs;
+            var arrayVarDescriptor = currentMethod.getVarTable().get(arrayOperand.getName());
+
             int arrayReg = arrayVarDescriptor.getVirtualReg();
             this.regLimitIncrement(arrayReg);
             this.stackLimitIncrement(1);
@@ -412,23 +413,68 @@ public class JasminGenerator {
             }
             this.stackLimitIncrement(-3);
 
-        } else if (lhs instanceof Operand) {
-            code.append(apply(assign.getRhs()));
-            Operand operand = (Operand) lhs;
-            var varDescriptor = currentMethod.getVarTable().get(operand.getName());
-            if (varDescriptor == null) {
-                 throw new RuntimeException("Variable " + operand.getName() + " not found in VarTable for instruction: " + assign);
-            }
-            int regNum = varDescriptor.getVirtualReg();
-            var jasminType = types.getJasminType(operand.getType());
-            var prefix = types.getPrefix(jasminType); // 'i' for int, 'a' for ref, etc.
-            code.append(generateStores(prefix, regNum)).append(NL);
+            return code.toString();
 
-        } else {
-            throw new NotImplementedException("Unsupported LHS for assignment: " + lhs.getClass().getName() + " in instruction: " + assign);
         }
+
+        if(isIinc(assign)){
+            BinaryOpInstruction inst = (BinaryOpInstruction) assign.getRhs();
+
+            if(inst.getRightOperand().isLiteral()){
+                Operand left = (Operand) inst.getLeftOperand();
+                var reg = currentMethod.getVarTable().get(left.getName()).getVirtualReg();
+
+                var value = Integer.parseInt(((LiteralElement)inst.getRightOperand()).getLiteral());
+
+                if(inst.getOperation().getOpType().equals(OperationType.SUB)){
+                    value = -value;
+                }
+
+                code.append("iinc ").append(reg).append(" ").append(value).append(NL);
+
+                return code.toString();
+            }
+
+            Operand rigth = (Operand) inst.getRightOperand();
+            var reg = currentMethod.getVarTable().get(rigth.getName()).getVirtualReg();
+
+            var value = Integer.parseInt(((LiteralElement)inst.getLeftOperand()).getLiteral());
+
+            if(inst.getOperation().getOpType().equals(OperationType.SUB)){
+                value = -value;
+            }
+
+            code.append("iinc ").append(reg).append(" ").append(value).append(NL);
+
+            return code.toString();
+
+
+        }
+
+
+
+
+        // generate code for loading what's on the right
+        code.append(apply(assign.getRhs()));
+
+        if (!(lhs instanceof Operand)) {
+            throw new NotImplementedException(lhs.getClass());
+        }
+
+        var operand = (Operand) lhs;
+
+        // get register
+        var reg = currentMethod.getVarTable().get(operand.getName());
+
+        var type = types.getJasminType(operand.getType());
+        var prefix = types.getPrefix(type);
+
+
+        code.append(generateStores(prefix,reg.getVirtualReg())).append(NL);
+
         return code.toString();
     }
+
 
     private String generateSingleOp(SingleOpInstruction singleOp) {
         return apply(singleOp.getSingleOperand());

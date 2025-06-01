@@ -41,11 +41,6 @@ dependencies {
     // https://mvnrepository.com/artifact/org.fusesource.jansi/jansi
     implementation 'org.fusesource.jansi:jansi:2.4.0'
 
-    // Include all JARs from the 'libs' directory
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-    // You might also have JMM related JARs in libs-jmm, if so, add a similar line:
-    // implementation fileTree(dir: 'libs-jmm', include: ['*.jar'])
-
 }
 
 
@@ -70,4 +65,9 @@ sourceSets {
 
 application {
     mainClass = 'pt.up.fe.comp2025.Launcher'
+}
+
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
 }
