@@ -1,0 +1,14 @@
+import s.Other;
+
+class A {
+    Other b;
+    public Other getB() {
+        return b;
+    }
+
+
+    public Other func(){
+    return this.getB();
+}
+
+}

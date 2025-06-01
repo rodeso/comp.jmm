@@ -387,6 +387,20 @@ public class SemanticAnalysisTest {
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/staticMainCorrect.jmm"));
         TestUtils.noErrors(result);
     }
+
+    @Test
+    public void rightThis(){
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/this.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void returnImported(){
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ReturnImported.jmm"));
+        TestUtils.noErrors(result);
+    }
 // test for reference i don't think it's necessary
 //    @Test
 //    public void FieldReference() {
