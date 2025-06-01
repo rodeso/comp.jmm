@@ -128,6 +128,8 @@ public class OptimizationsTest {
         System.out.println(original.getOllirCode());
         OllirResult optimized = getOllirResultOpt(filename);
 
+        System.out.println(optimized.getOllirCode());
+
         CpUtils.assertNotEquals("Expected code to change with -o flag\n\nOriginal code:\n" + original.getOllirCode(),
                 original.getOllirCode(), optimized.getOllirCode(),
                 optimized);
@@ -200,6 +202,29 @@ public class OptimizationsTest {
         CpUtils.assertFindLiteral("10", method, optimized);
         CpUtils.assertFindLiteral("20", method, optimized);
         CpUtils.assertFindLiteral("40", method, optimized);
+
+        System.out.println(optimized.getOllirCode());
+    }
+
+    @Test
+    public void PropWithReassign() {
+
+        String filename = "extra/Prop_reassign.jmm";
+
+        var original = getOllirResult(filename);
+        var optimized = getOllirResultOpt(filename);
+
+
+        CpUtils.assertTrue("Expected code to change with -o flag\n\nOriginal code:\n" + original.getOllirCode(),
+                !original.getOllirCode().equals(optimized.getOllirCode()), optimized);
+
+        var method = CpUtils.getMethod(optimized, "func");
+        CpUtils.assertFindLiteral("10", method, optimized);
+        CpUtils.assertFindLiteral("5", method, optimized);
+
+
+
+
 
         System.out.println(optimized.getOllirCode());
     }

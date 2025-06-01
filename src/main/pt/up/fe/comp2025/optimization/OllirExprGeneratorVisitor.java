@@ -313,7 +313,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
                 return new OllirExprResult(code);
             }
             if(node.getChild(1).isInstance(VAR_REF_EXPR) && node.getChild(0).isInstance(INTEGER_LITERAL)&& !types.isField(node.getChild(1))){
-                code = rhs.getRef() +" "+ node.get("op")+resOllirType+" "+lhs.getRef();
+                code = lhs.getRef() +" "+ node.get("op")+resOllirType+" "+rhs.getRef();
                 return new OllirExprResult(code);
             }
 

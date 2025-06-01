@@ -1,0 +1,19 @@
+class InstSelection_iinc {
+    int b;
+
+    public int func(){
+        int i;
+        int a;
+        i = 1;
+        a = i;
+        i = b;
+        a = i +10;
+        i = 5;
+        a = i;
+        return 1;
+
+    }
+    public static void main(String[] args) {
+
+    }
+}

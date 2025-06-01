@@ -70,3 +70,10 @@ The goal of this project is to develop a compiler for a simplified version of th
 - Constant Folding
 - Constant Propagation
 - Register Allocation
+
+
+### Contributions
+
+Rafael Campeão 40%
+Rodrigo de Sousa 35%
+André de Sousa 25%

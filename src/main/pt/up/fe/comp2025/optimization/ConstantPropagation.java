@@ -90,6 +90,8 @@ public class ConstantPropagation extends PreorderJmmVisitor<Void, Void> {
         if(Kind.INTEGER_LITERAL.check(value) || Kind.BOOLEAN_LITERAL.check(value)){
             constantVars.put(varName,value);
 
+        } else if (constantVars.containsKey(varName)) {
+            constantVars.remove(varName);
         }
         return null;
     }
