@@ -119,9 +119,34 @@ public class JasminGenerator {
         // This way, build is idempotent
         if (code == null) {
             code = apply(ollirResult.getOllirClass());
+            // Peephole optimization for iinc: replace iload, iconst_1, iadd, istore, iload, istore patterns
+            code = optimizeIinc(code);
         }
 
         return code;
+    }
+
+    /**
+     * Peephole optimization to replace increment patterns with iinc instruction.
+     * Looks for sequences: iload_N, iconst_1, iadd, istore_T, iload_T, istore_N -> iinc N 1
+     */
+    private String optimizeIinc(String code) {
+        var sb = new StringBuffer();
+        // Regex pattern matching the six-instruction sequence with optional leading whitespace
+        String patternStr = "(?m)^[ \\t]*iload_(\\d+)[ \\t]*\\r?\\n" +
+                            "[ \\t]*iconst_1[ \\t]*\\r?\\n" +
+                            "[ \\t]*iadd[ \\t]*\\r?\\n" +
+                            "[ \\t]*istore_(\\d+)[ \\t]*\\r?\\n" +
+                            "[ \\t]*iload_\\2[ \\t]*\\r?\\n" +
+                            "[ \\t]*istore_\\1";
+        var pattern = java.util.regex.Pattern.compile(patternStr);
+        var matcher = pattern.matcher(code);
+        while (matcher.find()) {
+            String reg = matcher.group(1); // the original variable register
+            matcher.appendReplacement(sb, "iinc " + reg + " 1");
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 
     private String generatePutInst(PutFieldInstruction putFieldInstruction){
@@ -315,19 +340,59 @@ public class JasminGenerator {
         var code = new StringBuilder();
         var lhs = assign.getDest();
 
+        if (lhs instanceof Operand && assign.getRhs() instanceof BinaryOpInstruction) {
+            Operand destOperand = (Operand) lhs;
+            BinaryOpInstruction binaryOp = (BinaryOpInstruction) assign.getRhs();
+
+            // Check if destination is an integer and operation is ADD
+            if (types.getJasminType(destOperand.getType()).equals("I") &&
+                binaryOp.getOperation().getOpType() == OperationType.ADD) {
+
+                Operand varOpInBinary = null;
+                LiteralElement constLiteralInBinary = null;
+
+                Element leftOfBinary = binaryOp.getLeftOperand();
+                Element rightOfBinary = binaryOp.getRightOperand();
+
+                if (leftOfBinary instanceof Operand && ((Operand) leftOfBinary).getName().equals(destOperand.getName()) &&
+                    rightOfBinary instanceof LiteralElement && types.getJasminType(rightOfBinary.getType()).equals("I")) {
+                    varOpInBinary = (Operand) leftOfBinary; // This is destOperand
+                    constLiteralInBinary = (LiteralElement) rightOfBinary;
+                }
+                else if (rightOfBinary instanceof Operand && ((Operand) rightOfBinary).getName().equals(destOperand.getName()) &&
+                         leftOfBinary instanceof LiteralElement && types.getJasminType(leftOfBinary.getType()).equals("I")) {
+                    varOpInBinary = (Operand) rightOfBinary; // This is destOperand
+                    constLiteralInBinary = (LiteralElement) leftOfBinary;
+                }
+
+                if (varOpInBinary != null && constLiteralInBinary != null) {
+                    try {
+                        int incrementValue = Integer.parseInt(constLiteralInBinary.getLiteral());
+                        if (incrementValue != 0 && incrementValue >= -128 && incrementValue <= 127) {
+                            var varDescriptor = currentMethod.getVarTable().get(destOperand.getName());
+                            if (varDescriptor != null) {
+                                int regNum = varDescriptor.getVirtualReg();
+                                this.regLimitIncrement(regNum);
+
+                                code.append("iinc ").append(regNum).append(" ").append(incrementValue).append(NL);
+                                return code.toString();
+                            }
+                        }
+                    } catch (NumberFormatException e) {
+                    }
+                }
+            }
+        }
+
         if (lhs instanceof ArrayOperand) {
             ArrayOperand arrayOperand = (ArrayOperand) lhs;
-
 
             var arrayVarDescriptor = currentMethod.getVarTable().get(arrayOperand.getName());
             if (arrayVarDescriptor == null) {
                 throw new RuntimeException("Array variable " + arrayOperand.getName() + " not found in VarTable for instruction: " + assign);
             }
-
             int arrayReg = arrayVarDescriptor.getVirtualReg();
-
             this.regLimitIncrement(arrayReg);
-
             this.stackLimitIncrement(1);
             String arrayLoadInstruction;
             if (arrayReg >= 0 && arrayReg <= 3) {
@@ -336,43 +401,32 @@ public class JasminGenerator {
                 arrayLoadInstruction = "aload " + arrayReg;
             }
             code.append(arrayLoadInstruction).append(NL);
-
             code.append(apply(arrayOperand.getIndexOperands().get(0))); // Index is an Element
-
             code.append(apply(assign.getRhs())); // RHS is an Element
-
             org.specs.comp.ollir.type.Type elementType = arrayOperand.getType();
             String jasminElementType = types.getJasminType(elementType);
-
-            // Based on the element type, choose the correct store instruction
-            if (jasminElementType.equals("I") || jasminElementType.equals("Z")) { // Integer or Boolean
+            if (jasminElementType.equals("I") || jasminElementType.equals("Z")) {
                 code.append("iastore").append(NL);
-            } else { // Object references (including other arrays or custom objects)
+            } else {
                 code.append("aastore").append(NL);
             }
-
             this.stackLimitIncrement(-3);
 
         } else if (lhs instanceof Operand) {
-
             code.append(apply(assign.getRhs()));
-
             Operand operand = (Operand) lhs;
             var varDescriptor = currentMethod.getVarTable().get(operand.getName());
             if (varDescriptor == null) {
                  throw new RuntimeException("Variable " + operand.getName() + " not found in VarTable for instruction: " + assign);
             }
             int regNum = varDescriptor.getVirtualReg();
-
             var jasminType = types.getJasminType(operand.getType());
             var prefix = types.getPrefix(jasminType); // 'i' for int, 'a' for ref, etc.
-
             code.append(generateStores(prefix, regNum)).append(NL);
 
         } else {
             throw new NotImplementedException("Unsupported LHS for assignment: " + lhs.getClass().getName() + " in instruction: " + assign);
         }
-
         return code.toString();
     }
 
