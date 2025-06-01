@@ -47,7 +47,7 @@ public class JasminUtils {
 
     }
     public String getJasminClassType(ClassType type){
-        return "L"+type.getName();
+        return "L"+type.getName()+";";
 
     }
 

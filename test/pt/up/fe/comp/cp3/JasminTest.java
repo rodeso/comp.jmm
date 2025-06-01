@@ -95,6 +95,7 @@ public class JasminTest {
     @Test
     public void section2_Arithmetic_BytecodeIndex_IloadArg() {
         var jasminResult = getJasminResult("arithmetic/ByteCodeIndexes1.ollir");
+        System.out.println(jasminResult.getJasminCode());
         var methodCode = CpUtils.getJasminMethod(jasminResult);
 
         int iloadIndex = CpUtils.getBytecodeIndex("iload", methodCode);
@@ -289,6 +290,15 @@ public class JasminTest {
 
     @Test
     public void NewObject() {
+        var jasminResult = getJasminResult("basic/NewObject.ollir");
+        System.out.println(jasminResult.getJasminCode());
         CpUtils.runJasmin(getJasminResult("basic/NewObject.ollir"), "");
+    }
+
+    @Test
+    public void ReturnObject() {
+        var jasminResult = getJasminResult("basic/ReturnObject.ollir");
+        System.out.println(jasminResult.getJasminCode());
+        CpUtils.runJasmin(getJasminResult("basic/ReturnObject.ollir"), "");
     }
 }

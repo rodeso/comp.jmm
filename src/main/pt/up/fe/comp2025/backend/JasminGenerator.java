@@ -75,6 +75,7 @@ public class JasminGenerator {
         generators.put(InvokeStaticInstruction.class,this::generateInvokeStatic);
         generators.put(InvokeSpecialInstruction.class,this::generateInvokeSpecialInst);
         generators.put(InvokeVirtualInstruction.class,this::generateInvokeVirtual);
+        generators.put(ArrayLengthInstruction.class,this::generateArrayLength);
 
     }
 
@@ -276,9 +277,13 @@ public class JasminGenerator {
 
         if(!staticMethod){
             this.regLimitIncrement(0);
+            this.regLimitIncrement(method.getParams().size());
+        }
+        else {
+            this.regLimitIncrement(method.getParams().size()-1);
         }
 
-        this.regLimitIncrement(method.getParams().size());
+
         StringBuilder methodBody = new StringBuilder();
         for (var inst : method.getInstructions()) {
             var labels = method.getLabels(inst);
@@ -405,9 +410,26 @@ public class JasminGenerator {
         this.stackLimitIncrement(-1);
         // apply operation
         if(binaryOp.getOperation().getOpType() == OperationType.LTH){
+            String ifInst ="if_icmplt";
 
+            if(binaryOp.getRightOperand().isLiteral() && Integer.parseInt(((LiteralElement)binaryOp.getRightOperand()).getLiteral()) ==0){
+                ifInst = "iflt";
+            }
             int tagNum = types.getTagForIf_icmplt();
-            code.append("if_icmplt ").append("j_true_").append(tagNum).append(NL)
+            code.append(ifInst).append(" ").append("j_true_").append(tagNum).append(NL)
+                    .append("iconst_0").append(NL).append("goto ").append("j_end").append(tagNum).append(NL)
+                    .append("j_true_").append(tagNum).append(":").append(NL)
+                    .append("iconst_1").append(NL)
+                    .append("j_end").append(tagNum).append(":").append(NL);
+            return code.toString();
+        }
+
+        if(binaryOp.getOperation().getOpType() == OperationType.GTE){
+            String ifInst ="if_icmpge";
+
+            
+            int tagNum = types.getTagForIf_icmplt();
+            code.append(ifInst).append(" ").append("j_true_").append(tagNum).append(NL)
                     .append("iconst_0").append(NL).append("goto ").append("j_end").append(tagNum).append(NL)
                     .append("j_true_").append(tagNum).append(":").append(NL)
                     .append("iconst_1").append(NL)
@@ -449,7 +471,9 @@ public class JasminGenerator {
         }
         code.append(returnType).append(NL);
 
-        this.stackLimitIncrement(-1);
+        if(!returnType.equals("return")){
+            this.stackLimitIncrement(-1);
+        }
 
         return code.toString();
     }
@@ -459,7 +483,7 @@ public class JasminGenerator {
 
         // Get the class name to instantiate
 
-        
+
         var returnType = newInstruction.getReturnType();
         if(returnType instanceof ArrayType){
             for(var arg : newInstruction.getArguments()){
@@ -568,6 +592,19 @@ public class JasminGenerator {
         }
 
 
+
+        return code.toString();
+    }
+
+
+    private String generateArrayLength(ArrayLengthInstruction arrayLengthInstruction){
+        StringBuilder code = new StringBuilder();
+
+        var caller = arrayLengthInstruction.getCaller();
+
+        code.append(apply(caller));
+
+        code.append("arraylength").append(NL);
 
         return code.toString();
     }

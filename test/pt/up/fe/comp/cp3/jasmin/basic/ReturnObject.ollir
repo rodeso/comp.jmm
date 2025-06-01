@@ -1,0 +1,24 @@
+import ioPlus;
+
+ArrayInit {
+
+
+
+
+.construct ArrayInit().V {
+    invokespecial(this, "<init>").V;
+}
+
+.method public func().ArrayInit {
+   tmp0.ArrayInit :=.ArrayInit new(ArrayInit).ArrayInit;
+invokespecial(tmp0.ArrayInit, "<init>").V;
+k.ArrayInit :=.ArrayInit tmp0.ArrayInit;
+
+   ret.ArrayInit k.ArrayInit;
+}
+
+.method public static main(args.array.String).V {
+   ret.V ;
+}
+
+}
