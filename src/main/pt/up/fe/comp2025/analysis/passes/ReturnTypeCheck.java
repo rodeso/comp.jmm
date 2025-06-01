@@ -49,10 +49,8 @@ public class ReturnTypeCheck extends AnalysisVisitor {
         // Compute expression type using TypeUtils instance
         TypeUtils utils = new TypeUtils(table);
         Type actual = utils.getExprTypeNotStatic(expr, methodDecl);
-        if (actual == null) {
-            addReport(Report.newError(Stage.SEMANTIC,
-                    expr.getLine(), expr.getColumn(),
-                    "Could not determine return expression type in method '" + methodName + "'.", null));
+        // Skip checking for imported or unknown return types
+        if (actual.getName().equals("imported_or_unknown")) {
             return null;
         }
 
