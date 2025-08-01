@@ -9,7 +9,7 @@ Yet Another JMM Compiler
 - **Tools:** Java, ANTLR, JASMIN, Gradle
 - **Institution:** [FEUP](https://sigarra.up.pt/feup/en/web_page.Inicial)
 - **Course:** [COMP](https://sigarra.up.pt/feup/pt/UCURR_GERAL.FICHA_UC_VIEW?pv_ocorrencia_id=520331) (Compilers)
-- **Project grade:** TBD
+- **Project grade:** 18
 - **Group members:**
     - André Pinto de Sousa (up202109775@up.pt)
     - Rafael Ângelo dos Reis Campeão (up202207553@up.pt)
